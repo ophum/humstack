@@ -1,6 +1,8 @@
 package memory
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -36,10 +38,16 @@ func (s *MemoryStore) Get(key string) interface{} {
 
 func (s *MemoryStore) Put(key string, data interface{}) {
 	s.data[key] = data
+	buf, _ := json.MarshalIndent(s.data, "", "  ")
+	fmt.Println("============= PUT DATA ==============")
+	fmt.Println(string(buf))
 }
 
 func (s *MemoryStore) Delete(key string) {
 	delete(s.data, key)
+	buf, _ := json.MarshalIndent(s.data, "", "  ")
+	fmt.Println("============= DEL DATA ==============")
+	fmt.Println(string(buf))
 }
 
 func (s *MemoryStore) Lock(key string) {
