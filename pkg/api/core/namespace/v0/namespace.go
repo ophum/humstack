@@ -23,7 +23,7 @@ func NewNamespaceHandler(store store.Store) *NamespaceHandler {
 	}
 }
 
-func (h *NamespaceHandler) Find(ctx *gin.Context) {
+func (h *NamespaceHandler) FindAll(ctx *gin.Context) {
 	list := h.store.List("namespace/")
 	nsList := []core.Namespace{}
 	for _, o := range list {
@@ -35,7 +35,7 @@ func (h *NamespaceHandler) Find(ctx *gin.Context) {
 	})
 }
 
-func (h *NamespaceHandler) FindById(ctx *gin.Context) {
+func (h *NamespaceHandler) Find(ctx *gin.Context) {
 	nsName := ctx.Param("namespace_name")
 	obj := h.store.Get(getKey(nsName))
 	if obj == nil {

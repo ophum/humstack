@@ -5,8 +5,8 @@ import (
 )
 
 type NamespaceHandlerInterface interface {
+	FindAll(ctx *gin.Context)
 	Find(ctx *gin.Context)
-	FindById(ctx *gin.Context)
 	Create(ctx *gin.Context)
 	Update(ctx *gin.Context)
 	Delete(ctx *gin.Context)
@@ -29,8 +29,8 @@ func NewNamespaceHandler(router *gin.RouterGroup, basePath string, nhi Namespace
 func (h *NamespaceHandler) RegisterHandlers() {
 	ns := h.router.Group(h.basePath)
 	{
-		ns.GET("", h.nhi.Find)
-		ns.GET("/:namespace_name", h.nhi.FindById)
+		ns.GET("", h.nhi.FindAll)
+		ns.GET("/:namespace_name", h.nhi.Find)
 		ns.POST("", h.nhi.Create)
 		ns.PUT("/:namespace_name", h.nhi.Update)
 		ns.DELETE("/:namespace_name", h.nhi.Delete)

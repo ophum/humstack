@@ -24,7 +24,7 @@ func NewNetworkHandler(store store.Store) *NetworkHandler {
 	}
 }
 
-func (h *NetworkHandler) Find(ctx *gin.Context) {
+func (h *NetworkHandler) FindAll(ctx *gin.Context) {
 	nsName := ctx.Query("ns")
 	list := h.store.List(getKey(nsName, ""))
 	nsList := []system.Network{}
@@ -37,7 +37,7 @@ func (h *NetworkHandler) Find(ctx *gin.Context) {
 	})
 }
 
-func (h *NetworkHandler) FindById(ctx *gin.Context) {
+func (h *NetworkHandler) Find(ctx *gin.Context) {
 	nsName := ctx.Query("ns")
 	netName := ctx.Param("network_name")
 
