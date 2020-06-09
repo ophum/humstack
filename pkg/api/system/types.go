@@ -67,8 +67,22 @@ type NodeSpec struct {
 	LimitMemory string `json:"limitMemory" yaml:"limitMemory"`
 }
 
+type NodeState string
+
+const (
+	NodeStateNotReady NodeState = "NotReady"
+	NodeStateReady    NodeState = "Ready"
+)
+
+type NodeStatus struct {
+	State           NodeState `json:"state" yaml:"state"`
+	RequestedVcpus  string    `json:"requestedVcpus" yaml:"requestedVcpus"`
+	RequestedMemory string    `json:"requestedMemory" yaml:"requestedMemory"`
+}
+
 type Node struct {
 	meta.Meta
 
-	Spec NodeSpec `json:"spec" yaml:"spec"`
+	Spec   NodeSpec   `json:"spec" yaml:"spec"`
+	Status NodeStatus `json:"status" yaml:"status"`
 }
