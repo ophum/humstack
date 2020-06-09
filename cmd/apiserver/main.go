@@ -20,8 +20,8 @@ func main() {
 
 	v0 := r.Group("/api/v0")
 	{
-		nsi := namespace.NewNamespaceHandler(v0, "namespaces", nsh)
-		nwi := network.NewNetworkHandler(v0, "networks", nwh)
+		nsi := namespace.NewNamespaceHandler(v0, nsh)
+		nwi := network.NewNetworkHandler(v0, nwh)
 		nsi.RegisterHandlers()
 		nwi.RegisterHandlers()
 	}

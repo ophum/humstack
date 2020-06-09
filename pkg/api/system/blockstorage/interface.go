@@ -11,21 +11,23 @@ type BlockStorageHandlerInterface interface {
 }
 
 type BlockStorageHandler struct {
-	router   *gin.RouterGroup
-	basePath string
-	bshi     BlockStorageHandlerInterface
+	router *gin.RouterGroup
+	bshi   BlockStorageHandlerInterface
 }
 
-func NewBlockStorageHandler(router *gin.RouterGroup, basePath string, bshi BlockStorageHandlerInterface) *BlockStorageHandler {
+const (
+	basePath = "namespaces/:namespace_name/blockstorages"
+)
+
+func NewBlockStorageHandler(router *gin.RouterGroup, bshi BlockStorageHandlerInterface) *BlockStorageHandler {
 	return &BlockStorageHandler{
-		router:   router,
-		basePath: basePath,
-		bshi:     bshi,
+		router: router,
+		bshi:   bshi,
 	}
 }
 
 func (h *BlockStorageHandler) RegisterHandlers() {
-	bs := h.router.Group(h.basePath)
+	bs := h.router.Group(basePath)
 	{
 		bs.GET("", h.bshi.FindAll)
 		bs.GET("/:block_storage_name", h.bshi.Find)

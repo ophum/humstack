@@ -13,21 +13,23 @@ type NetworkHandlerInterface interface {
 }
 
 type NetworkHandler struct {
-	router   *gin.RouterGroup
-	basePath string
-	nhi      NetworkHandlerInterface
+	router *gin.RouterGroup
+	nhi    NetworkHandlerInterface
 }
 
-func NewNetworkHandler(router *gin.RouterGroup, basePath string, nhi NetworkHandlerInterface) *NetworkHandler {
+const (
+	basePath = "namespaces/:namespace_name/networks"
+)
+
+func NewNetworkHandler(router *gin.RouterGroup, nhi NetworkHandlerInterface) *NetworkHandler {
 	return &NetworkHandler{
-		router:   router,
-		basePath: basePath,
-		nhi:      nhi,
+		router: router,
+		nhi:    nhi,
 	}
 }
 
 func (h *NetworkHandler) RegisterHandlers() {
-	ns := h.router.Group(h.basePath)
+	ns := h.router.Group(basePath)
 	{
 		ns.GET("", h.nhi.FindAll)
 		ns.GET("/:network_name", h.nhi.Find)

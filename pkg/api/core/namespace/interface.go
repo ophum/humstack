@@ -12,22 +12,24 @@ type NamespaceHandlerInterface interface {
 	Delete(ctx *gin.Context)
 }
 
+const (
+	basePath = "namespaces"
+)
+
 type NamespaceHandler struct {
-	router   *gin.RouterGroup
-	basePath string
-	nhi      NamespaceHandlerInterface
+	router *gin.RouterGroup
+	nhi    NamespaceHandlerInterface
 }
 
-func NewNamespaceHandler(router *gin.RouterGroup, basePath string, nhi NamespaceHandlerInterface) *NamespaceHandler {
+func NewNamespaceHandler(router *gin.RouterGroup, nhi NamespaceHandlerInterface) *NamespaceHandler {
 	return &NamespaceHandler{
-		router:   router,
-		basePath: basePath,
-		nhi:      nhi,
+		router: router,
+		nhi:    nhi,
 	}
 }
 
 func (h *NamespaceHandler) RegisterHandlers() {
-	ns := h.router.Group(h.basePath)
+	ns := h.router.Group(basePath)
 	{
 		ns.GET("", h.nhi.FindAll)
 		ns.GET("/:namespace_name", h.nhi.Find)
