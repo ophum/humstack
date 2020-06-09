@@ -19,3 +19,13 @@ type Network struct {
 
 	Spec NetworkSpec `json:"spec" yaml:"spec"`
 }
+
+type BlockStorageSpec struct {
+	RequestSize string `json:"requestSize" yaml:"requestSize"`
+	LimitSize   string `json:"limitSize" yaml:"limitSize"`
+}
+type BlockStorage struct {
+	meta.Meta
+
+	Spec BlockStorageSpec `json:"spec" yaml:"spec"`
+}
