@@ -10,6 +10,8 @@ import (
 	bsv0 "github.com/ophum/humstack/pkg/api/system/blockstorage/v0"
 	"github.com/ophum/humstack/pkg/api/system/network"
 	netv0 "github.com/ophum/humstack/pkg/api/system/network/v0"
+	"github.com/ophum/humstack/pkg/api/system/node"
+	nodev0 "github.com/ophum/humstack/pkg/api/system/node/v0"
 	"github.com/ophum/humstack/pkg/api/system/virtualmachine"
 	vmv0 "github.com/ophum/humstack/pkg/api/system/virtualmachine/v0"
 	store "github.com/ophum/humstack/pkg/store/memory"
@@ -23,6 +25,7 @@ func main() {
 	nwh := netv0.NewNetworkHandler(s)
 	bsh := bsv0.NewBlockStorageHandler(s)
 	vmh := vmv0.NewVirtualMachineHandler(s)
+	nodeh := nodev0.NewNodeHandler(s)
 
 	v0 := r.Group("/api/v0")
 	{
@@ -30,10 +33,12 @@ func main() {
 		nwi := network.NewNetworkHandler(v0, nwh)
 		bsi := blockstorage.NewBlockStorageHandler(v0, bsh)
 		vmi := virtualmachine.NewVirtualMachineHandler(v0, vmh)
+		nodei := node.NewNodeHandler(v0, nodeh)
 		nsi.RegisterHandlers()
 		nwi.RegisterHandlers()
 		bsi.RegisterHandlers()
 		vmi.RegisterHandlers()
+		nodei.RegisterHandlers()
 	}
 
 	if err := r.Run(":8080"); err != nil {

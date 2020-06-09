@@ -61,3 +61,14 @@ type VirtualMachine struct {
 
 	Spec VirtualMachineSpec `json:"spec" yaml:"spec"`
 }
+
+type NodeSpec struct {
+	LimitVcpus  string `json:"limitVcpus" yaml:"limitVcpus"`
+	LimitMemory string `json:"limitMemory" yaml:"limitMemory"`
+}
+
+type Node struct {
+	meta.Meta
+
+	Spec NodeSpec `json:"spec" yaml:"spec"`
+}
