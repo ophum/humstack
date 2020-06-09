@@ -47,7 +47,7 @@ type VirtualMachineSpec struct {
 	LimitVcpus   string `json:"limitVcpus" yaml:"limitVcpus"`
 
 	RequestMemory string `json:"requestMemory" yaml:"requestMemory"`
-	limitMemory   string `json:"limitMemory" yaml:"limitMemory"`
+	LimitMemory   string `json:"limitMemory" yaml:"limitMemory"`
 
 	BlockStorageNames []string `json:"blockStorageNames" yaml:"blockStorageNames"`
 
