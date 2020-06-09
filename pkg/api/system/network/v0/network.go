@@ -135,5 +135,5 @@ func (h *NetworkHandler) Delete(ctx *gin.Context) {
 }
 
 func getKey(nsName, name string) string {
-	return filepath.Join(nsName, "network", name)
+	return filepath.Join("network", nsName, name)
 }
