@@ -29,3 +29,35 @@ type BlockStorage struct {
 
 	Spec BlockStorageSpec `json:"spec" yaml:"spec"`
 }
+
+type VirtualMachineLoginUser struct {
+	Username          string   `json:"username" yaml:"username"`
+	SSHAuthorizedKeys []string `json:"sshAuthorizedKeys" yaml:"sshAuthorizedKeys"`
+}
+
+type VirtualMachineNIC struct {
+	NetworkName    string `json:"networkName" yaml:"networkName"`
+	IPv4Address    string `json:"ipv4Address" yaml:"ipv4Address"`
+	IPv6Address    string `json:"ipv6Address" yaml:"ipv6Address"`
+	DefaultGateway string `json:"defaultGateway" yaml:"defaultGateway"`
+}
+
+type VirtualMachineSpec struct {
+	RequestVcpus string `json:"requestVcpus" yaml:"requestVcpus"`
+	LimitVcpus   string `json:"limitVcpus" yaml:"limitVcpus"`
+
+	RequestMemory string `json:"requestMemory" yaml:"requestMemory"`
+	limitMemory   string `json:"limitMemory" yaml:"limitMemory"`
+
+	BlockStorageNames []string `json:"blockStorageNames" yaml:"blockStorageNames"`
+
+	NICs []*VirtualMachineNIC `json:"nics" yaml:"nics"`
+
+	LoginUsers []*VirtualMachineLoginUser `json:"loginUsers"`
+}
+
+type VirtualMachine struct {
+	meta.Meta
+
+	Spec VirtualMachineSpec `json:"spec" yaml:"spec"`
+}
