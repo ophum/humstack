@@ -13,7 +13,7 @@ type VirtualMachineHandlerInterface interface {
 }
 
 const (
-	basePath = "virtualmachines"
+	basePath = "namespaces/:namespace_id/virtualmachines"
 )
 
 type VirtualMachineHandler struct {
@@ -32,9 +32,9 @@ func (h *VirtualMachineHandler) RegisterHandlers() {
 	vm := h.router.Group(basePath)
 	{
 		vm.GET("", h.vmhi.FindAll)
-		vm.GET("/:virtual_machine_name", h.vmhi.Find)
+		vm.GET("/:virtual_machine_id", h.vmhi.Find)
 		vm.POST("", h.vmhi.Create)
-		vm.PUT("/:virtual_machine_name", h.vmhi.Update)
-		vm.DELETE("/:virtual_machine_name", h.vmhi.Delete)
+		vm.PUT("/:virtual_machine_id", h.vmhi.Update)
+		vm.DELETE("/:virtual_machine_id", h.vmhi.Delete)
 	}
 }

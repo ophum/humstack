@@ -18,7 +18,7 @@ type NetworkHandler struct {
 }
 
 const (
-	basePath = "namespaces/:namespace_name/networks"
+	basePath = "namespaces/:namespace_id/networks"
 )
 
 func NewNetworkHandler(router *gin.RouterGroup, nhi NetworkHandlerInterface) *NetworkHandler {
@@ -32,9 +32,9 @@ func (h *NetworkHandler) RegisterHandlers() {
 	ns := h.router.Group(basePath)
 	{
 		ns.GET("", h.nhi.FindAll)
-		ns.GET("/:network_name", h.nhi.Find)
+		ns.GET("/:network_id", h.nhi.Find)
 		ns.POST("", h.nhi.Create)
-		ns.PUT("/:network_name", h.nhi.Update)
-		ns.DELETE("/:network_name", h.nhi.Delete)
+		ns.PUT("/:network_id", h.nhi.Update)
+		ns.DELETE("/:network_id", h.nhi.Delete)
 	}
 }

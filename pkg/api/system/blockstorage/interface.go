@@ -16,7 +16,7 @@ type BlockStorageHandler struct {
 }
 
 const (
-	basePath = "namespaces/:namespace_name/blockstorages"
+	basePath = "namespaces/:namespace_id/blockstorages"
 )
 
 func NewBlockStorageHandler(router *gin.RouterGroup, bshi BlockStorageHandlerInterface) *BlockStorageHandler {
@@ -30,9 +30,9 @@ func (h *BlockStorageHandler) RegisterHandlers() {
 	bs := h.router.Group(basePath)
 	{
 		bs.GET("", h.bshi.FindAll)
-		bs.GET("/:block_storage_name", h.bshi.Find)
+		bs.GET("/:block_storage_id", h.bshi.Find)
 		bs.POST("", h.bshi.Create)
-		bs.PUT("/:block_storage_name", h.bshi.Update)
-		bs.DELETE("/:block_storage_name", h.bshi.Delete)
+		bs.PUT("/:block_storage_id", h.bshi.Update)
+		bs.DELETE("/:block_storage_id", h.bshi.Delete)
 	}
 }

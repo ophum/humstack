@@ -32,9 +32,9 @@ func (h *NodeHandler) RegisterHandlers() {
 	node := h.router.Group(basePath)
 	{
 		node.GET("", h.nhi.FindAll)
-		node.GET("/:node_name", h.nhi.Find)
+		node.GET("/:node_id", h.nhi.Find)
 		node.POST("", h.nhi.Create)
-		node.PUT("/:node_name", h.nhi.Update)
-		node.DELETE("/:node_name", h.nhi.Delete)
+		node.PUT("/:node_id", h.nhi.Update)
+		node.DELETE("/:node_id", h.nhi.Delete)
 	}
 }

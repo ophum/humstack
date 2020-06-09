@@ -32,9 +32,9 @@ func (h *NamespaceHandler) RegisterHandlers() {
 	ns := h.router.Group(basePath)
 	{
 		ns.GET("", h.nhi.FindAll)
-		ns.GET("/:namespace_name", h.nhi.Find)
+		ns.GET("/:namespace_id", h.nhi.Find)
 		ns.POST("", h.nhi.Create)
-		ns.PUT("/:namespace_name", h.nhi.Update)
-		ns.DELETE("/:namespace_name", h.nhi.Delete)
+		ns.PUT("/:namespace_id", h.nhi.Update)
+		ns.DELETE("/:namespace_id", h.nhi.Delete)
 	}
 }
