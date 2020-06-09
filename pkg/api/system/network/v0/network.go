@@ -25,7 +25,8 @@ func NewNetworkHandler(store store.Store) *NetworkHandler {
 }
 
 func (h *NetworkHandler) FindAll(ctx *gin.Context) {
-	nsName := ctx.Query("ns")
+	nsName := ctx.Param("namespace_name")
+
 	list := h.store.List(getKey(nsName, ""))
 	nsList := []system.Network{}
 	for _, o := range list {
@@ -38,7 +39,7 @@ func (h *NetworkHandler) FindAll(ctx *gin.Context) {
 }
 
 func (h *NetworkHandler) Find(ctx *gin.Context) {
-	nsName := ctx.Query("ns")
+	nsName := ctx.Param("namespace_name")
 	netName := ctx.Param("network_name")
 
 	obj := h.store.Get(getKey(nsName, netName))
@@ -54,7 +55,7 @@ func (h *NetworkHandler) Find(ctx *gin.Context) {
 }
 
 func (h *NetworkHandler) Create(ctx *gin.Context) {
-	nsName := ctx.Query("ns")
+	nsName := ctx.Param("namespace_name")
 
 	var request system.Network
 
@@ -87,12 +88,10 @@ func (h *NetworkHandler) Create(ctx *gin.Context) {
 }
 
 func (h *NetworkHandler) Update(ctx *gin.Context) {
+	nsName := ctx.Param("namespace_name")
 	netName := ctx.Param("network_name")
 
-	nsName := ctx.Query("ns")
-
 	var request system.Network
-
 	err := ctx.Bind(&request)
 	if err != nil {
 		meta.ResponseJSON(ctx, http.StatusBadRequest, err, nil)
@@ -122,9 +121,8 @@ func (h *NetworkHandler) Update(ctx *gin.Context) {
 }
 
 func (h *NetworkHandler) Delete(ctx *gin.Context) {
+	nsName := ctx.Param("namespace_name")
 	netName := ctx.Param("network_name")
-
-	nsName := ctx.Query("ns")
 
 	key := getKey(nsName, netName)
 	h.store.Lock(key)
