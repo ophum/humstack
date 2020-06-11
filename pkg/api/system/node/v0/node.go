@@ -2,16 +2,15 @@ package v0
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/api/system/node"
 	"github.com/ophum/humstack/pkg/store"
-	"gopkg.in/yaml.v2"
 )
 
 type NodeHandler struct {
@@ -41,11 +40,11 @@ func (h *NodeHandler) FindAll(ctx *gin.Context) {
 }
 
 func (h *NodeHandler) Find(ctx *gin.Context) {
-	nodeID := getNodeID(ctx)
+	nodeName := getNodeName(ctx)
 
-	obj := h.store.Get(getKey(nodeID))
+	obj := h.store.Get(getKey(nodeName))
 	if obj == nil {
-		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Node `%s` is not found.", nodeID), nil)
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Node `%s` is not found.", nodeName), nil)
 		return
 	}
 
@@ -63,22 +62,13 @@ func (h *NodeHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	buf, _ := yaml.Marshal(request)
-
-	fmt.Println(string(buf))
 	err = h.validate(&request)
 	if err != nil {
 		meta.ResponseJSON(ctx, http.StatusBadRequest, err, nil)
 		return
 	}
 
-	id, err := uuid.NewRandom()
-	if err != nil {
-		meta.ResponseJSON(ctx, http.StatusInternalServerError, fmt.Errorf("Error: failed to generate id."), nil)
-		return
-	}
-
-	request.ID = id.String()
+	request.ID = request.Name
 
 	key := getKey(request.ID)
 	obj := h.store.Get(key)
@@ -98,27 +88,29 @@ func (h *NodeHandler) Create(ctx *gin.Context) {
 }
 
 func (h *NodeHandler) Update(ctx *gin.Context) {
-	nodeID := getNodeID(ctx)
+	nodeName := getNodeName(ctx)
 
 	var request system.Node
 	err := ctx.Bind(&request)
 	if err != nil {
+		log.Println(err)
 		meta.ResponseJSON(ctx, http.StatusBadRequest, err, nil)
 		return
 	}
 
-	if nodeID != request.ID {
+	if nodeName != request.Name {
 		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: Can't change Node Name."), nil)
 		return
 	}
 
 	err = h.validate(&request)
 	if err != nil {
+		log.Println(err)
 		meta.ResponseJSON(ctx, http.StatusBadRequest, err, nil)
 		return
 	}
 
-	key := getKey(nodeID)
+	key := getKey(nodeName)
 	obj := h.store.Get(key)
 	if obj == nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: Node `%s` is not found.", request.Name), nil)
@@ -136,9 +128,9 @@ func (h *NodeHandler) Update(ctx *gin.Context) {
 }
 
 func (h *NodeHandler) Delete(ctx *gin.Context) {
-	nodeID := getNodeID(ctx)
+	nodeName := getNodeName(ctx)
 
-	key := getKey(nodeID)
+	key := getKey(nodeName)
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
@@ -149,10 +141,11 @@ func (h *NodeHandler) Delete(ctx *gin.Context) {
 	})
 }
 
-func (h *NodeHandler) isNameDuplicate(name string) bool {
+func (h *NodeHandler) isNameDuplicate(node *system.Node) bool {
 	list := h.store.List(getKey(""))
 	for _, o := range list {
-		if o.(system.Node).Name == name {
+		n := o.(system.Node)
+		if n.ID != node.ID && n.Name == node.Name {
 			return true
 		}
 	}
@@ -164,16 +157,16 @@ func (h *NodeHandler) validate(node *system.Node) error {
 		return fmt.Errorf("Error: name is empty.")
 	}
 
-	if h.isNameDuplicate(node.Name) {
+	if h.isNameDuplicate(node) {
 		return fmt.Errorf("Error: name is empty.")
 	}
 	return nil
 }
 
-func getNodeID(ctx *gin.Context) string {
-	return ctx.Param("node_id")
+func getNodeName(ctx *gin.Context) string {
+	return ctx.Param("node_name")
 }
 
-func getKey(id string) string {
-	return filepath.Join("node", id)
+func getKey(name string) string {
+	return filepath.Join("node", name)
 }
