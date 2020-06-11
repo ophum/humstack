@@ -12,7 +12,7 @@ type NamespaceSpec struct {
 }
 
 type Namespace struct {
-	meta.Meta
+	meta.Meta `json:"meta" yaml:"meta"`
 
 	Spec NamespaceSpec `json:"spec" yaml:"spec"`
 }

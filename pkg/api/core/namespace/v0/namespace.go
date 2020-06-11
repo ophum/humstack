@@ -2,9 +2,11 @@ package v0
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/core/namespace"
 	"github.com/ophum/humstack/pkg/api/meta"
@@ -36,10 +38,10 @@ func (h *NamespaceHandler) FindAll(ctx *gin.Context) {
 }
 
 func (h *NamespaceHandler) Find(ctx *gin.Context) {
-	nsName := ctx.Param("namespace_name")
-	obj := h.store.Get(getKey(nsName))
+	nsID := ctx.Param("namespace_id")
+	obj := h.store.Get(getKey(nsID))
 	if obj == nil {
-		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Namespace `%s` is not found.", nsName), nil)
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Namespace `%s` is not found.", nsID), nil)
 		return
 	}
 
@@ -54,16 +56,25 @@ func (h *NamespaceHandler) Create(ctx *gin.Context) {
 
 	err := ctx.Bind(&request)
 	if err != nil {
+		log.Println(err)
 		meta.ResponseJSON(ctx, http.StatusBadRequest, err, nil)
 		return
 	}
 
 	if request.Name == "" {
+		log.Println("name is empty")
 		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: name is empty."), nil)
 		return
 	}
 
-	key := getKey(request.Name)
+	id, err := uuid.NewRandom()
+	if err != nil {
+		meta.ResponseJSON(ctx, http.StatusInternalServerError, err, nil)
+		return
+	}
+
+	request.ID = id.String()
+	key := getKey(request.ID)
 	obj := h.store.Get(key)
 	if obj != nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: namespace `%s` is already exists.", request.Name), nil)
@@ -85,9 +96,9 @@ func (h *NamespaceHandler) Update(ctx *gin.Context) {
 }
 
 func (h *NamespaceHandler) Delete(ctx *gin.Context) {
-	nsName := ctx.Param("namespace_name")
+	nsID := ctx.Param("namespace_id")
 
-	key := getKey(nsName)
+	key := getKey(nsID)
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
