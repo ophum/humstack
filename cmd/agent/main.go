@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/ophum/humstack/pkg/agents/system/network"
 	"github.com/ophum/humstack/pkg/agents/system/node"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
@@ -9,7 +10,7 @@ import (
 
 func main() {
 	client := client.NewClients("localhost", 8080)
-	na := node.NewNodeAgent(system.Node{
+	nodeAgent := node.NewNodeAgent(system.Node{
 		Meta: meta.Meta{
 			Name: "test",
 		},
@@ -19,5 +20,9 @@ func main() {
 		},
 	}, client)
 
-	na.Run()
+	netAgent := network.NewNetworkAgent(client)
+
+	go nodeAgent.Run()
+	netAgent.Run()
+
 }
