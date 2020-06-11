@@ -6,10 +6,12 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/api/system/node"
 	"github.com/ophum/humstack/pkg/store"
+	"gopkg.in/yaml.v2"
 )
 
 type NodeHandler struct {
@@ -25,9 +27,8 @@ func NewNodeHandler(store store.Store) *NodeHandler {
 }
 
 func (h *NodeHandler) FindAll(ctx *gin.Context) {
-	nsName := getNSName(ctx)
 
-	list := h.store.List(getKey(nsName, ""))
+	list := h.store.List(getKey(""))
 	nodeList := []system.Node{}
 	for _, o := range list {
 		nodeList = append(nodeList, o.(system.Node))
@@ -40,12 +41,11 @@ func (h *NodeHandler) FindAll(ctx *gin.Context) {
 }
 
 func (h *NodeHandler) Find(ctx *gin.Context) {
-	nsName := getNSName(ctx)
-	nodeName := getNodeName(ctx)
+	nodeID := getNodeID(ctx)
 
-	obj := h.store.Get(getKey(nsName, nodeName))
+	obj := h.store.Get(getKey(nodeID))
 	if obj == nil {
-		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Node `%s` is not found.", nodeName), nil)
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Node `%s` is not found.", nodeID), nil)
 		return
 	}
 
@@ -56,8 +56,6 @@ func (h *NodeHandler) Find(ctx *gin.Context) {
 }
 
 func (h *NodeHandler) Create(ctx *gin.Context) {
-	nsName := getNSName(ctx)
-
 	var request system.Node
 	err := ctx.Bind(&request)
 	if err != nil {
@@ -65,12 +63,24 @@ func (h *NodeHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	if request.Name == "" {
-		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: name is empty."), nil)
+	buf, _ := yaml.Marshal(request)
+
+	fmt.Println(string(buf))
+	err = h.validate(&request)
+	if err != nil {
+		meta.ResponseJSON(ctx, http.StatusBadRequest, err, nil)
 		return
 	}
 
-	key := getKey(nsName, request.Name)
+	id, err := uuid.NewRandom()
+	if err != nil {
+		meta.ResponseJSON(ctx, http.StatusInternalServerError, fmt.Errorf("Error: failed to generate id."), nil)
+		return
+	}
+
+	request.ID = id.String()
+
+	key := getKey(request.ID)
 	obj := h.store.Get(key)
 	if obj != nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: Node `%s` is already exists.", request.Name), nil)
@@ -88,8 +98,7 @@ func (h *NodeHandler) Create(ctx *gin.Context) {
 }
 
 func (h *NodeHandler) Update(ctx *gin.Context) {
-	nsName := getNSName(ctx)
-	nodeName := getNodeName(ctx)
+	nodeID := getNodeID(ctx)
 
 	var request system.Node
 	err := ctx.Bind(&request)
@@ -98,16 +107,18 @@ func (h *NodeHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	if nodeName != request.Name {
+	if nodeID != request.ID {
 		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: Can't change Node Name."), nil)
 		return
 	}
-	if request.Name == "" {
-		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: name is empty."), nil)
+
+	err = h.validate(&request)
+	if err != nil {
+		meta.ResponseJSON(ctx, http.StatusBadRequest, err, nil)
 		return
 	}
 
-	key := getKey(nsName, request.Name)
+	key := getKey(nodeID)
 	obj := h.store.Get(key)
 	if obj == nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: Node `%s` is not found.", request.Name), nil)
@@ -125,10 +136,9 @@ func (h *NodeHandler) Update(ctx *gin.Context) {
 }
 
 func (h *NodeHandler) Delete(ctx *gin.Context) {
-	nsName := getNSName(ctx)
-	nodeName := getNodeName(ctx)
+	nodeID := getNodeID(ctx)
 
-	key := getKey(nsName, nodeName)
+	key := getKey(nodeID)
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
@@ -139,14 +149,31 @@ func (h *NodeHandler) Delete(ctx *gin.Context) {
 	})
 }
 
-func getNSName(ctx *gin.Context) string {
-	return ctx.Param("namespace_name")
+func (h *NodeHandler) isNameDuplicate(name string) bool {
+	list := h.store.List(getKey(""))
+	for _, o := range list {
+		if o.(system.Node).Name == name {
+			return true
+		}
+	}
+	return false
 }
 
-func getNodeName(ctx *gin.Context) string {
-	return ctx.Param("node_name")
+func (h *NodeHandler) validate(node *system.Node) error {
+	if node.Name == "" {
+		return fmt.Errorf("Error: name is empty.")
+	}
+
+	if h.isNameDuplicate(node.Name) {
+		return fmt.Errorf("Error: name is empty.")
+	}
+	return nil
 }
 
-func getKey(nsName, name string) string {
-	return filepath.Join("node", nsName, name)
+func getNodeID(ctx *gin.Context) string {
+	return ctx.Param("node_id")
+}
+
+func getKey(id string) string {
+	return filepath.Join("node", id)
 }

@@ -42,6 +42,15 @@ type VirtualMachineNIC struct {
 	DefaultGateway string `json:"defaultGateway" yaml:"defaultGateway"`
 }
 
+type VirtualMachineActionState string
+
+const (
+	VirtualMachineActionStateStart  VirtualMachineActionState = "Start"
+	VirtualMachineActionStateStop   VirtualMachineActionState = "Stop"
+	VirtualMachineActionStateReboot VirtualMachineActionState = "Reboot"
+	VirtualMachineActionStateDone   VirtualMachineActionState = "Done"
+)
+
 type VirtualMachineSpec struct {
 	RequestVcpus string `json:"requestVcpus" yaml:"requestVcpus"`
 	LimitVcpus   string `json:"limitVcpus" yaml:"limitVcpus"`
@@ -54,6 +63,8 @@ type VirtualMachineSpec struct {
 	NICs []*VirtualMachineNIC `json:"nics" yaml:"nics"`
 
 	LoginUsers []*VirtualMachineLoginUser `json:"loginUsers"`
+
+	ActionState VirtualMachineActionState `json:"actionState" yaml:"actionState"`
 }
 
 type VirtualMachine struct {
@@ -81,7 +92,7 @@ type NodeStatus struct {
 }
 
 type Node struct {
-	meta.Meta
+	meta.Meta `json:"meta" yaml:"meta"`
 
 	Spec   NodeSpec   `json:"spec" yaml:"spec"`
 	Status NodeStatus `json:"status" yaml:"status"`
