@@ -15,7 +15,7 @@ type NetworkSpec struct {
 }
 
 type Network struct {
-	meta.Meta
+	meta.Meta `json:"meta" yaml:"meta"`
 
 	Spec NetworkSpec `json:"spec" yaml:"spec"`
 }

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/api/system/network"
@@ -25,9 +26,9 @@ func NewNetworkHandler(store store.Store) *NetworkHandler {
 }
 
 func (h *NetworkHandler) FindAll(ctx *gin.Context) {
-	nsName := ctx.Param("namespace_name")
+	nsID := ctx.Param("namespace_id")
 
-	list := h.store.List(getKey(nsName, ""))
+	list := h.store.List(getKey(nsID, ""))
 	nsList := []system.Network{}
 	for _, o := range list {
 		nsList = append(nsList, o.(system.Network))
@@ -39,12 +40,12 @@ func (h *NetworkHandler) FindAll(ctx *gin.Context) {
 }
 
 func (h *NetworkHandler) Find(ctx *gin.Context) {
-	nsName := ctx.Param("namespace_name")
-	netName := ctx.Param("network_name")
+	nsID := ctx.Param("namespace_id")
+	netID := ctx.Param("network_id")
 
-	obj := h.store.Get(getKey(nsName, netName))
+	obj := h.store.Get(getKey(nsID, netID))
 	if obj == nil {
-		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Network `%s` is not found.", nsName), nil)
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Network `%s` is not found.", nsID), nil)
 		return
 	}
 
@@ -55,7 +56,7 @@ func (h *NetworkHandler) Find(ctx *gin.Context) {
 }
 
 func (h *NetworkHandler) Create(ctx *gin.Context) {
-	nsName := ctx.Param("namespace_name")
+	nsID := ctx.Param("namespace_id")
 
 	var request system.Network
 
@@ -70,8 +71,21 @@ func (h *NetworkHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(nsName, request.Name)
-	obj := h.store.Get(key)
+	obj := h.store.Get(filepath.Join("namespace", nsID))
+	if obj == nil {
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: namespace is not found."), nil)
+		return
+	}
+
+	id, err := uuid.NewRandom()
+	if err != nil {
+		meta.ResponseJSON(ctx, http.StatusInternalServerError, err, nil)
+		return
+	}
+
+	request.ID = id.String()
+	key := getKey(nsID, request.ID)
+	obj = h.store.Get(key)
 	if obj != nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: Network `%s` is already exists.", request.Name), nil)
 		return
@@ -88,8 +102,8 @@ func (h *NetworkHandler) Create(ctx *gin.Context) {
 }
 
 func (h *NetworkHandler) Update(ctx *gin.Context) {
-	nsName := ctx.Param("namespace_name")
-	netName := ctx.Param("network_name")
+	nsID := ctx.Param("namespace_id")
+	netID := ctx.Param("network_id")
 
 	var request system.Network
 	err := ctx.Bind(&request)
@@ -98,15 +112,15 @@ func (h *NetworkHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	if netName != request.Name {
+	if netID != request.ID {
 		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: Can't change Network Name."), nil)
 		return
 	}
 
-	key := getKey(nsName, netName)
+	key := getKey(nsID, netID)
 	obj := h.store.Get(key)
 	if obj == nil {
-		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: Network `%s` is not found in Namespace `%s`.", netName, nsName), nil)
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: Network `%s` is not found in Namespace `%s`.", netID, nsID), nil)
 		return
 	}
 
@@ -121,10 +135,10 @@ func (h *NetworkHandler) Update(ctx *gin.Context) {
 }
 
 func (h *NetworkHandler) Delete(ctx *gin.Context) {
-	nsName := ctx.Param("namespace_name")
-	netName := ctx.Param("network_name")
+	nsID := ctx.Param("namespace_id")
+	netID := ctx.Param("network_id")
 
-	key := getKey(nsName, netName)
+	key := getKey(nsID, netID)
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
@@ -134,6 +148,6 @@ func (h *NetworkHandler) Delete(ctx *gin.Context) {
 	})
 }
 
-func getKey(nsName, name string) string {
-	return filepath.Join("network", nsName, name)
+func getKey(nsID, id string) string {
+	return filepath.Join("network", nsID, id)
 }
