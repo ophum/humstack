@@ -92,7 +92,35 @@ func (h *NamespaceHandler) Create(ctx *gin.Context) {
 }
 
 func (h *NamespaceHandler) Update(ctx *gin.Context) {
-	meta.ResponseJSON(ctx, http.StatusNotImplemented, fmt.Errorf("Not implemented"), nil)
+	nsID := ctx.Param("namespace_id")
+	var request core.Namespace
+
+	err := ctx.Bind(&request)
+	if err != nil {
+		meta.ResponseJSON(ctx, http.StatusBadRequest, err, nil)
+		return
+	}
+
+	if request.ID != nsID {
+		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: can't change id."), nil)
+		return
+	}
+
+	key := getKey(request.ID)
+	obj := h.store.Get(key)
+	if obj == nil {
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: namespace `%s` is not found.", request.ID), nil)
+		return
+	}
+
+	h.store.Lock(key)
+	defer h.store.Unlock(key)
+
+	h.store.Put(key, request)
+
+	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
+		"namespace": request,
+	})
 }
 
 func (h *NamespaceHandler) Delete(ctx *gin.Context) {
