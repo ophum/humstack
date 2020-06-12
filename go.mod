@@ -7,5 +7,6 @@ require (
 	github.com/go-resty/resty/v2 v2.3.0
 	github.com/google/uuid v1.1.1
 	github.com/n0stack/n0stack v0.2.134
+	github.com/vishvananda/netlink v1.0.0
 	gopkg.in/yaml.v2 v2.2.8
 )

@@ -22,9 +22,13 @@ func TestNetworkCreate(t *testing.T) {
 		Meta: meta.Meta{
 			Name:      "test-network",
 			Namespace: namespace,
+			Annotations: map[string]string{
+				"networkv0/network_type":    "Bridge",
+				"networkv0/default_gateway": "10.0.0.1/24",
+			},
 		},
 		Spec: system.NetworkSpec{
-			IPv4CIDR: "192.168.10.1/24",
+			IPv4CIDR: "10.0.0.0/24",
 			ID:       "100",
 		},
 	})

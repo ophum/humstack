@@ -1,12 +1,12 @@
 package network
 
 import (
+	"crypto/md5"
+	"encoding/json"
 	"fmt"
-	"hash/crc32"
 	"log"
 	"time"
 
-	"github.com/n0stack/n0stack/n0core/pkg/driver/iproute2"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
 )
@@ -16,7 +16,7 @@ type NetworkAgent struct {
 }
 
 const (
-	NetworkV0AnnotationNetworkType = "networkv0/network-type"
+	NetworkV0AnnotationNetworkType = "networkv0/network_type"
 )
 
 const (
@@ -50,18 +50,28 @@ func (a *NetworkAgent) Run() {
 				}
 
 				for _, net := range netList {
+					oldHash := net.ResourceHash
 					switch net.Annotations[NetworkV0AnnotationNetworkType] {
 					case NetworkV0NetworkTypeBridge:
-
 						err = syncBridgeNetwork(net)
 						if err != nil {
+							log.Println("error sync bridge network")
+							log.Println(err)
 							continue
 						}
 
-						_, err = a.client.SystemV0().Network().Update(net)
-						if err != nil {
-							continue
-						}
+					}
+
+					if net.ResourceHash == oldHash {
+						log.Println("no update")
+						continue
+					}
+					log.Println("update store")
+					_, err = a.client.SystemV0().Network().Update(net)
+					if err != nil {
+						log.Println("error Update store")
+						log.Println(err)
+						continue
 					}
 				}
 			}
@@ -69,21 +79,14 @@ func (a *NetworkAgent) Run() {
 	}
 }
 
-func syncBridgeNetwork(network *system.Network) error {
-	cs := crc32.Checksum([]byte(network.ID), crc32.IEEETable)
-
-	bridgeName := fmt.Sprintf("hum-%010x", cs)
-	log.Printf("create bridge `%s`\n", bridgeName)
-	_, err := iproute2.NewBridge(bridgeName)
+func setHash(network *system.Network) error {
+	network.ResourceHash = ""
+	resourceJSON, err := json.Marshal(network)
 	if err != nil {
 		return err
 	}
 
-	network.Annotations["bridge_name"] = bridgeName
-	return nil
-}
-
-func createVXLANNetwork(network *system.Network) error {
-
+	hash := md5.Sum(resourceJSON)
+	network.ResourceHash = fmt.Sprintf("%x", hash)
 	return nil
 }
