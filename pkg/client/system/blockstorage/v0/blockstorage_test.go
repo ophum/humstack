@@ -1,0 +1,58 @@
+package v0
+
+import (
+	"encoding/json"
+	"log"
+	"testing"
+
+	"github.com/ophum/humstack/pkg/api/meta"
+	"github.com/ophum/humstack/pkg/api/system"
+)
+
+func TestBlockStorageCreate(t *testing.T) {
+	client := NewBlockStorageClient("http", "localhost", 8080)
+
+	bs, err := client.Create(&system.BlockStorage{
+		Meta: meta.Meta{
+			Name:      "test-bs1",
+			Namespace: "de4932c3-323f-464a-979f-6d037465a0bf",
+		},
+		Spec: system.BlockStorageSpec{
+			RequestSize: "10G",
+			LimitSize:   "10G",
+			From: system.BlockStorageFrom{
+				Type: system.BlockStorageFromTypeEmpty,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	buf, _ := json.Marshal(bs)
+	log.Println(string(buf))
+}
+
+func TestBlockStorageList(t *testing.T) {
+	client := NewBlockStorageClient("http", "localhost", 8080)
+
+	bsList, err := client.List("de4932c3-323f-464a-979f-6d037465a0bf")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	buf, _ := json.MarshalIndent(bsList, "", "  ")
+	log.Println(string(buf))
+}
+
+func TestBlockStorageGet(t *testing.T) {
+	client := NewBlockStorageClient("http", "localhost", 8080)
+
+	bsList, err := client.Get("de4932c3-323f-464a-979f-6d037465a0bf", "90976489-70b9-435f-9ac2-61e681822625")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	buf, _ := json.MarshalIndent(bsList, "", "  ")
+	log.Println(string(buf))
+}
