@@ -2,11 +2,11 @@ package v0
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/api/system/blockstorage"
@@ -58,7 +58,12 @@ func (h *BlockStorageHandler) Find(ctx *gin.Context) {
 
 func (h *BlockStorageHandler) Create(ctx *gin.Context) {
 	nsID := getNSID(ctx)
-	log.Println(nsID)
+
+	obj := h.store.Get(filepath.Join("namespace", nsID))
+	if obj == nil {
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: namespace is not found."), nil)
+		return
+	}
 
 	var request system.BlockStorage
 	err := ctx.Bind(&request)
@@ -80,8 +85,15 @@ func (h *BlockStorageHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(nsID, request.Name)
-	obj := h.store.Get(key)
+	id, err := uuid.NewRandom()
+	if err != nil {
+		meta.ResponseJSON(ctx, http.StatusInternalServerError, err, nil)
+		return
+	}
+
+	request.ID = id.String()
+	key := getKey(nsID, request.ID)
+	obj = h.store.Get(key)
 	if obj != nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: BlockStorage `%s` is already exists.", request.Name), nil)
 		return
