@@ -5,17 +5,33 @@ import (
 	"log"
 	"testing"
 
+	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
+	nsv0 "github.com/ophum/humstack/pkg/client/core/namespace/v0"
 )
 
 func TestBlockStorageCreate(t *testing.T) {
-	client := NewBlockStorageClient("http", "localhost", 8080)
 
+	nsClient := nsv0.NewNamespaceClient("http", "localhost", 8080)
+	ns, err := nsClient.Create(&core.Namespace{
+		Meta: meta.Meta{
+			Name: "test-ns",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client := NewBlockStorageClient("http", "localhost", 8080)
 	bs, err := client.Create(&system.BlockStorage{
 		Meta: meta.Meta{
-			Name:      "test-bs1",
-			Namespace: "de4932c3-323f-464a-979f-6d037465a0bf",
+			Name:      "test-bs",
+			Namespace: ns.ID,
+			Annotations: map[string]string{
+				"blockstoragev0/type":      "Local",
+				"blockstoragev0/node_name": "X1Carbon",
+			},
 		},
 		Spec: system.BlockStorageSpec{
 			RequestSize: "10G",

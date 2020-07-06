@@ -1,6 +1,10 @@
 package main
 
 import (
+	"log"
+	"os"
+
+	"github.com/ophum/humstack/pkg/agents/system/blockstorage"
 	"github.com/ophum/humstack/pkg/agents/system/network"
 	"github.com/ophum/humstack/pkg/agents/system/node"
 	"github.com/ophum/humstack/pkg/api/meta"
@@ -10,9 +14,14 @@ import (
 
 func main() {
 	client := client.NewClients("localhost", 8080)
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	nodeAgent := node.NewNodeAgent(system.Node{
 		Meta: meta.Meta{
-			Name: "test",
+			Name: hostname,
 		},
 		Spec: system.NodeSpec{
 			LimitMemory: "8Gi",
@@ -22,7 +31,10 @@ func main() {
 
 	netAgent := network.NewNetworkAgent(client)
 
+	bsAgent := blockstorage.NewBlockStorageAgent(client, "./blockstorages")
+
 	go nodeAgent.Run()
+	go bsAgent.Run()
 	netAgent.Run()
 
 }

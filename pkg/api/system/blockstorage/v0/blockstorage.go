@@ -120,7 +120,7 @@ func (h *BlockStorageHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	if bsID != request.Name {
+	if bsID != request.ID {
 		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: Can't change BlockStorage Name."), nil)
 		return
 	}

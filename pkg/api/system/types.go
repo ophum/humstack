@@ -62,10 +62,22 @@ type BlockStorageSpec struct {
 	From        BlockStorageFrom `json:"from" yaml:"from"`
 }
 
+type BlockStorageState string
+
+const (
+	BlockStorageStateActive  BlockStorageState = "Active"
+	BlockStorageStateUsed    BlockStorageState = "Used"
+	BlockStorageStatePending BlockStorageState = "Pending"
+)
+
+type BlockStorageStatus struct {
+	State BlockStorageState `json:"state" yaml:"state"`
+}
 type BlockStorage struct {
 	meta.Meta
 
-	Spec BlockStorageSpec `json:"spec" yaml:"spec"`
+	Spec   BlockStorageSpec   `json:"spec" yaml:"spec"`
+	Status BlockStorageStatus `json:"status" yaml:"status"`
 }
 
 type VirtualMachineLoginUser struct {

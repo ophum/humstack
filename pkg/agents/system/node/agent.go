@@ -58,3 +58,7 @@ func (a *NodeAgent) Run() {
 	}
 
 }
+
+func (a *NodeAgent) GetNodeInfo() *system.Node {
+	return a.NodeInfo
+}
