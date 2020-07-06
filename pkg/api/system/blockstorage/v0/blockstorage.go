@@ -137,12 +137,7 @@ func (h *BlockStorageHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(nsID, request.Name)
-	obj := h.store.Get(key)
-	if obj == nil {
-		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: BlockStorage `%s` is not found.", request.Name), nil)
-		return
-	}
+	key := getKey(nsID, request.ID)
 
 	h.store.Lock(key)
 	defer h.store.Unlock(key)

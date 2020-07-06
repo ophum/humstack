@@ -45,6 +45,10 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 		}
 
 	}
+
+	if bs.Status.State == "" || bs.Status.State == system.BlockStorageStatePending {
+		bs.Status.State = system.BlockStorageStateActive
+	}
 	return setHash(bs)
 }
 

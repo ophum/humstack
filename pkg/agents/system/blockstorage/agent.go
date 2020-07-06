@@ -76,6 +76,7 @@ func (a *BlockStorageAgent) Run() {
 
 					_, err := a.client.SystemV0().BlockStorage().Update(bs)
 					if err != nil {
+						log.Println(err)
 						continue
 					}
 				}
