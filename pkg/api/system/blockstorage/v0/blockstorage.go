@@ -2,6 +2,7 @@ package v0
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"path/filepath"
 
@@ -25,9 +26,9 @@ func NewBlockStorageHandler(store store.Store) *BlockStorageHandler {
 }
 
 func (h *BlockStorageHandler) FindAll(ctx *gin.Context) {
-	nsName := getNSName(ctx)
+	nsID := getNSID(ctx)
 
-	list := h.store.List(getKey(nsName, ""))
+	list := h.store.List(getKey(nsID, ""))
 	bsList := []system.BlockStorage{}
 	for _, o := range list {
 		bsList = append(bsList, o.(system.BlockStorage))
@@ -40,12 +41,12 @@ func (h *BlockStorageHandler) FindAll(ctx *gin.Context) {
 }
 
 func (h *BlockStorageHandler) Find(ctx *gin.Context) {
-	nsName := getNSName(ctx)
-	bsName := getBSName(ctx)
+	nsID := getNSID(ctx)
+	bsID := getBSID(ctx)
 
-	obj := h.store.Get(getKey(nsName, bsName))
+	obj := h.store.Get(getKey(nsID, bsID))
 	if obj == nil {
-		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("BlockStorage `%s` is not found.", bsName), nil)
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("BlockStorage `%s` is not found.", bsID), nil)
 		return
 	}
 
@@ -56,7 +57,8 @@ func (h *BlockStorageHandler) Find(ctx *gin.Context) {
 }
 
 func (h *BlockStorageHandler) Create(ctx *gin.Context) {
-	nsName := getNSName(ctx)
+	nsID := getNSID(ctx)
+	log.Println(nsID)
 
 	var request system.BlockStorage
 	err := ctx.Bind(&request)
@@ -78,7 +80,7 @@ func (h *BlockStorageHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(nsName, request.Name)
+	key := getKey(nsID, request.Name)
 	obj := h.store.Get(key)
 	if obj != nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: BlockStorage `%s` is already exists.", request.Name), nil)
@@ -96,8 +98,8 @@ func (h *BlockStorageHandler) Create(ctx *gin.Context) {
 }
 
 func (h *BlockStorageHandler) Update(ctx *gin.Context) {
-	nsName := getNSName(ctx)
-	bsName := getBSName(ctx)
+	nsID := getNSID(ctx)
+	bsID := getBSID(ctx)
 
 	var request system.BlockStorage
 	err := ctx.Bind(&request)
@@ -106,7 +108,7 @@ func (h *BlockStorageHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	if bsName != request.Name {
+	if bsID != request.Name {
 		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: Can't change BlockStorage Name."), nil)
 		return
 	}
@@ -123,7 +125,7 @@ func (h *BlockStorageHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(nsName, request.Name)
+	key := getKey(nsID, request.Name)
 	obj := h.store.Get(key)
 	if obj == nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: BlockStorage `%s` is not found.", request.Name), nil)
@@ -141,10 +143,10 @@ func (h *BlockStorageHandler) Update(ctx *gin.Context) {
 }
 
 func (h *BlockStorageHandler) Delete(ctx *gin.Context) {
-	nsName := getNSName(ctx)
-	bsName := getBSName(ctx)
+	nsID := getNSID(ctx)
+	bsID := getBSID(ctx)
 
-	key := getKey(nsName, bsName)
+	key := getKey(nsID, bsID)
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
@@ -155,14 +157,14 @@ func (h *BlockStorageHandler) Delete(ctx *gin.Context) {
 	})
 }
 
-func getNSName(ctx *gin.Context) string {
-	return ctx.Param("namespace_name")
+func getNSID(ctx *gin.Context) string {
+	return ctx.Param("namespace_id")
 }
 
-func getBSName(ctx *gin.Context) string {
-	return ctx.Param("block_storage_name")
+func getBSID(ctx *gin.Context) string {
+	return ctx.Param("block_storage_id")
 }
 
-func getKey(nsName, name string) string {
-	return filepath.Join("blockstorage", nsName, name)
+func getKey(nsID, name string) string {
+	return filepath.Join("blockstorage", nsID, name)
 }

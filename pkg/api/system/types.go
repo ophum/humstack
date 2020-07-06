@@ -20,10 +20,48 @@ type Network struct {
 	Spec NetworkSpec `json:"spec" yaml:"spec"`
 }
 
-type BlockStorageSpec struct {
-	RequestSize string `json:"requestSize" yaml:"requestSize"`
-	LimitSize   string `json:"limitSize" yaml:"limitSize"`
+type ImageTag struct {
+	Tag              string `json:""`
+	BlockStorageName string `json:"blockStorageName" yaml:"blockStorageName"`
 }
+type ImageSpec struct {
+	Tags []ImageTag `json:"tags" yaml:"tags"`
+}
+
+type Image struct {
+	meta.Meta `json:"meta" yaml:"meta"`
+
+	Spec ImageSpec `json:"spec" yaml:"spec"`
+}
+
+type BlockStorageFromBaseImage struct {
+	ImageName string `json:"imageName" yaml:"imageName"`
+	Tag       string `json:"tag" yaml:"tag"`
+}
+
+type BlockStorageFromBlockStorage struct {
+	Name string `json:"name" yaml:"name"`
+}
+
+type BlockStorageFromType string
+
+const (
+	BlockStorageFromTypeBaseImage    BlockStorageFromType = "BaseImage"
+	BlockStorageFromTypeBlockStorage BlockStorageFromType = "BlockStorage"
+	BlockStorageFromTypeEmpty        BlockStorageFromType = "Empty"
+)
+
+type BlockStorageFrom struct {
+	Type         BlockStorageFromType         `json:"type" yaml:"type"`
+	BaseImage    BlockStorageFromBaseImage    `json:"baseImage" yaml:"baseImage"`
+	BlockStorage BlockStorageFromBlockStorage `json:"blockStorage" yaml:"blockStorage"`
+}
+type BlockStorageSpec struct {
+	RequestSize string           `json:"requestSize" yaml:"requestSize"`
+	LimitSize   string           `json:"limitSize" yaml:"limitSize"`
+	From        BlockStorageFrom `json:"from" yaml:"from"`
+}
+
 type BlockStorage struct {
 	meta.Meta
 
