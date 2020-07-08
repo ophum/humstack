@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	ImageURL = ""
+	ImageURL = "http://192.168.20.2:8082/bionic-server-cloudimg-amd64.img"
 )
 
 func TestBlockStorageCreateEmpty(t *testing.T) {

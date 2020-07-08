@@ -7,6 +7,7 @@ import (
 	"github.com/ophum/humstack/pkg/agents/system/blockstorage"
 	"github.com/ophum/humstack/pkg/agents/system/network"
 	"github.com/ophum/humstack/pkg/agents/system/node"
+	"github.com/ophum/humstack/pkg/agents/system/virtualmachine"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
@@ -33,8 +34,11 @@ func main() {
 
 	bsAgent := blockstorage.NewBlockStorageAgent(client, "./blockstorages")
 
+	vmAgent := virtualmachine.NewVirtualMachineAgent(client)
+
 	go nodeAgent.Run()
 	go bsAgent.Run()
+	go vmAgent.Run()
 	netAgent.Run()
 
 }
