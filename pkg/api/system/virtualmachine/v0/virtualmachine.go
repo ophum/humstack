@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/api/system/virtualmachine"
@@ -25,9 +26,9 @@ func NewVirtualMachineHandler(store store.Store) *VirtualMachineHandler {
 }
 
 func (h *VirtualMachineHandler) FindAll(ctx *gin.Context) {
-	nsName := getNSName(ctx)
+	nsID := getNSID(ctx)
 
-	list := h.store.List(getKey(nsName, ""))
+	list := h.store.List(getKey(nsID, ""))
 	vmList := []system.VirtualMachine{}
 	for _, o := range list {
 		vmList = append(vmList, o.(system.VirtualMachine))
@@ -40,12 +41,12 @@ func (h *VirtualMachineHandler) FindAll(ctx *gin.Context) {
 }
 
 func (h *VirtualMachineHandler) Find(ctx *gin.Context) {
-	nsName := getNSName(ctx)
-	vmName := getVMName(ctx)
+	nsID := getNSID(ctx)
+	vmID := getVMID(ctx)
 
-	obj := h.store.Get(getKey(nsName, vmName))
+	obj := h.store.Get(getKey(nsID, vmID))
 	if obj == nil {
-		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("VirtualMachine `%s` is not found.", vmName), nil)
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("VirtualMachine `%s` is not found.", vmID), nil)
 		return
 	}
 
@@ -56,7 +57,7 @@ func (h *VirtualMachineHandler) Find(ctx *gin.Context) {
 }
 
 func (h *VirtualMachineHandler) Create(ctx *gin.Context) {
-	nsName := getNSName(ctx)
+	nsID := getNSID(ctx)
 
 	var request system.VirtualMachine
 	err := ctx.Bind(&request)
@@ -70,7 +71,14 @@ func (h *VirtualMachineHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(nsName, request.Name)
+	id, err := uuid.NewRandom()
+	if err != nil {
+		meta.ResponseJSON(ctx, http.StatusInternalServerError, err, nil)
+		return
+	}
+
+	request.ID = id.String()
+	key := getKey(nsID, request.ID)
 	obj := h.store.Get(key)
 	if obj != nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: VirtualMachine `%s` is already exists.", request.Name), nil)
@@ -88,8 +96,8 @@ func (h *VirtualMachineHandler) Create(ctx *gin.Context) {
 }
 
 func (h *VirtualMachineHandler) Update(ctx *gin.Context) {
-	nsName := getNSName(ctx)
-	vmName := getVMName(ctx)
+	nsID := getNSID(ctx)
+	vmID := getVMID(ctx)
 
 	var request system.VirtualMachine
 	err := ctx.Bind(&request)
@@ -98,7 +106,7 @@ func (h *VirtualMachineHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	if vmName != request.Name {
+	if vmID != request.ID {
 		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: Can't change VirtualMachine Name."), nil)
 		return
 	}
@@ -107,7 +115,7 @@ func (h *VirtualMachineHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(nsName, request.Name)
+	key := getKey(nsID, request.ID)
 	obj := h.store.Get(key)
 	if obj == nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: VirtualMachine `%s` is not found.", request.Name), nil)
@@ -125,10 +133,10 @@ func (h *VirtualMachineHandler) Update(ctx *gin.Context) {
 }
 
 func (h *VirtualMachineHandler) Delete(ctx *gin.Context) {
-	nsName := getNSName(ctx)
-	vmName := getVMName(ctx)
+	nsID := getNSID(ctx)
+	vmID := getVMID(ctx)
 
-	key := getKey(nsName, vmName)
+	key := getKey(nsID, vmID)
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
@@ -139,14 +147,14 @@ func (h *VirtualMachineHandler) Delete(ctx *gin.Context) {
 	})
 }
 
-func getNSName(ctx *gin.Context) string {
-	return ctx.Param("namespace_name")
+func getNSID(ctx *gin.Context) string {
+	return ctx.Param("namespace_id")
 }
 
-func getVMName(ctx *gin.Context) string {
-	return ctx.Param("virtual_machine_name")
+func getVMID(ctx *gin.Context) string {
+	return ctx.Param("virtual_machine_id")
 }
 
-func getKey(nsName, name string) string {
-	return filepath.Join("virtualmachine", nsName, name)
+func getKey(nsID, vmID string) string {
+	return filepath.Join("virtualmachine", nsID, vmID)
 }

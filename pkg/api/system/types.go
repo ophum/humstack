@@ -123,10 +123,20 @@ type VirtualMachineSpec struct {
 	ActionState VirtualMachineActionState `json:"actionState" yaml:"actionState"`
 }
 
+type VirtualMachineState string
+
+const (
+	VirtualMachineStateRunning VirtualMachineState = "Running"
+)
+
+type VirtualMachineStatus struct {
+	State VirtualMachineState `json:"state" yaml:"state"`
+}
 type VirtualMachine struct {
 	meta.Meta
 
-	Spec VirtualMachineSpec `json:"spec" yaml:"spec"`
+	Spec   VirtualMachineSpec   `json:"spec" yaml:"spec"`
+	Status VirtualMachineStatus `json:"status" yaml:"status"`
 }
 
 type NodeSpec struct {
