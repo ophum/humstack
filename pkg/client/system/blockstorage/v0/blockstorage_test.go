@@ -11,7 +11,11 @@ import (
 	nsv0 "github.com/ophum/humstack/pkg/client/core/namespace/v0"
 )
 
-func TestBlockStorageCreate(t *testing.T) {
+const (
+	ImageURL = ""
+)
+
+func TestBlockStorageCreateEmpty(t *testing.T) {
 
 	nsClient := nsv0.NewNamespaceClient("http", "localhost", 8080)
 	ns, err := nsClient.Create(&core.Namespace{
@@ -30,7 +34,7 @@ func TestBlockStorageCreate(t *testing.T) {
 			Namespace: ns.ID,
 			Annotations: map[string]string{
 				"blockstoragev0/type":      "Local",
-				"blockstoragev0/node_name": "X1Carbon",
+				"blockstoragev0/node_name": "developvbox",
 			},
 		},
 		Spec: system.BlockStorageSpec{
@@ -49,6 +53,46 @@ func TestBlockStorageCreate(t *testing.T) {
 	log.Println(string(buf))
 }
 
+func TestBlockStorageCreateHTTP(t *testing.T) {
+
+	nsClient := nsv0.NewNamespaceClient("http", "localhost", 8080)
+	ns, err := nsClient.Create(&core.Namespace{
+		Meta: meta.Meta{
+			Name: "test-ns2",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client := NewBlockStorageClient("http", "localhost", 8080)
+	bs, err := client.Create(&system.BlockStorage{
+		Meta: meta.Meta{
+			Name:      "test-bs",
+			Namespace: ns.ID,
+			Annotations: map[string]string{
+				"blockstoragev0/type":      "Local",
+				"blockstoragev0/node_name": "developvbox",
+			},
+		},
+		Spec: system.BlockStorageSpec{
+			RequestSize: "10G",
+			LimitSize:   "10G",
+			From: system.BlockStorageFrom{
+				Type: system.BlockStorageFromTypeHTTP,
+				HTTP: system.BlockStorageFromHTTP{
+					URL: ImageURL,
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	buf, _ := json.Marshal(bs)
+	log.Println(string(buf))
+}
 func TestBlockStorageList(t *testing.T) {
 	client := NewBlockStorageClient("http", "localhost", 8080)
 

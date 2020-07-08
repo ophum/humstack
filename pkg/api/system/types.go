@@ -43,11 +43,16 @@ type BlockStorageFromBlockStorage struct {
 	Name string `json:"name" yaml:"name"`
 }
 
+type BlockStorageFromHTTP struct {
+	URL string `json:"url" yaml:"url"`
+}
+
 type BlockStorageFromType string
 
 const (
 	BlockStorageFromTypeBaseImage    BlockStorageFromType = "BaseImage"
 	BlockStorageFromTypeBlockStorage BlockStorageFromType = "BlockStorage"
+	BlockStorageFromTypeHTTP         BlockStorageFromType = "HTTP"
 	BlockStorageFromTypeEmpty        BlockStorageFromType = "Empty"
 )
 
@@ -55,6 +60,7 @@ type BlockStorageFrom struct {
 	Type         BlockStorageFromType         `json:"type" yaml:"type"`
 	BaseImage    BlockStorageFromBaseImage    `json:"baseImage" yaml:"baseImage"`
 	BlockStorage BlockStorageFromBlockStorage `json:"blockStorage" yaml:"blockStorage"`
+	HTTP         BlockStorageFromHTTP         `json:"http" yaml:"http"`
 }
 type BlockStorageSpec struct {
 	RequestSize string           `json:"requestSize" yaml:"requestSize"`

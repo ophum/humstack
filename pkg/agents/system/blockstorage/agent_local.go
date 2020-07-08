@@ -2,7 +2,9 @@ package blockstorage
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -43,7 +45,32 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 			log.Println(err.Error())
 			return err
 		}
+	case system.BlockStorageFromTypeHTTP:
+		log.Printf("Download: %s\n", bs.Spec.From.HTTP.URL)
+		res, err := http.Get(bs.Spec.From.HTTP.URL)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		defer res.Body.Close()
 
+		file, err := os.Create(path)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+
+		_, err = io.Copy(file, res.Body)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+
+		err = file.Close()
+		if err != nil {
+			log.Println(err)
+			return err
+		}
 	}
 
 	if bs.Status.State == "" || bs.Status.State == system.BlockStorageStatePending {
