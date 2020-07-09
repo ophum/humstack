@@ -12,7 +12,11 @@ import (
 )
 
 const (
-	ImageURL = "http://192.168.20.2:8082/bionic-server-cloudimg-amd64.img"
+	imageURL               = "http://192.168.20.2:8082/bionic-server-cloudimg-amd64.img"
+	namespaceID            = "test-namespace-01"
+	namespaceFromHTTPID    = "test-namespace-02"
+	blockStorageID         = "test-blockstorage-00"
+	blockStorageFromHTTPID = "test-blockstorage-01"
 )
 
 func TestBlockStorageCreateEmpty(t *testing.T) {
@@ -20,6 +24,7 @@ func TestBlockStorageCreateEmpty(t *testing.T) {
 	nsClient := nsv0.NewNamespaceClient("http", "localhost", 8080)
 	ns, err := nsClient.Create(&core.Namespace{
 		Meta: meta.Meta{
+			ID:   namespaceID,
 			Name: "test-ns",
 		},
 	})
@@ -30,6 +35,7 @@ func TestBlockStorageCreateEmpty(t *testing.T) {
 	client := NewBlockStorageClient("http", "localhost", 8080)
 	bs, err := client.Create(&system.BlockStorage{
 		Meta: meta.Meta{
+			ID:        blockStorageID,
 			Name:      "test-bs",
 			Namespace: ns.ID,
 			Annotations: map[string]string{
@@ -56,8 +62,9 @@ func TestBlockStorageCreateEmpty(t *testing.T) {
 func TestBlockStorageCreateHTTP(t *testing.T) {
 
 	nsClient := nsv0.NewNamespaceClient("http", "localhost", 8080)
-	ns, err := nsClient.Create(&core.Namespace{
+	_, err := nsClient.Create(&core.Namespace{
 		Meta: meta.Meta{
+			ID:   namespaceFromHTTPID,
 			Name: "test-ns2",
 		},
 	})
@@ -68,8 +75,9 @@ func TestBlockStorageCreateHTTP(t *testing.T) {
 	client := NewBlockStorageClient("http", "localhost", 8080)
 	bs, err := client.Create(&system.BlockStorage{
 		Meta: meta.Meta{
-			Name:      "test-bs",
-			Namespace: ns.ID,
+			ID:        blockStorageFromHTTPID,
+			Name:      "test-bs-from-http",
+			Namespace: namespaceFromHTTPID,
 			Annotations: map[string]string{
 				"blockstoragev0/type":      "Local",
 				"blockstoragev0/node_name": "developvbox",
@@ -81,7 +89,7 @@ func TestBlockStorageCreateHTTP(t *testing.T) {
 			From: system.BlockStorageFrom{
 				Type: system.BlockStorageFromTypeHTTP,
 				HTTP: system.BlockStorageFromHTTP{
-					URL: ImageURL,
+					URL: imageURL,
 				},
 			},
 		},
@@ -96,7 +104,7 @@ func TestBlockStorageCreateHTTP(t *testing.T) {
 func TestBlockStorageList(t *testing.T) {
 	client := NewBlockStorageClient("http", "localhost", 8080)
 
-	bsList, err := client.List("de4932c3-323f-464a-979f-6d037465a0bf")
+	bsList, err := client.List(namespaceID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +116,7 @@ func TestBlockStorageList(t *testing.T) {
 func TestBlockStorageGet(t *testing.T) {
 	client := NewBlockStorageClient("http", "localhost", 8080)
 
-	bsList, err := client.Get("de4932c3-323f-464a-979f-6d037465a0bf", "90976489-70b9-435f-9ac2-61e681822625")
+	bsList, err := client.Get(namespaceFromHTTPID, blockStorageFromHTTPID)
 	if err != nil {
 		t.Fatal(err)
 	}

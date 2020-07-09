@@ -40,11 +40,11 @@ func (h *NodeHandler) FindAll(ctx *gin.Context) {
 }
 
 func (h *NodeHandler) Find(ctx *gin.Context) {
-	nodeName := getNodeName(ctx)
+	nodeID := getNodeID(ctx)
 
-	obj := h.store.Get(getKey(nodeName))
+	obj := h.store.Get(getKey(nodeID))
 	if obj == nil {
-		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Node `%s` is not found.", nodeName), nil)
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Node `%s` is not found.", nodeID), nil)
 		return
 	}
 
@@ -68,8 +68,6 @@ func (h *NodeHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	request.ID = request.Name
-
 	key := getKey(request.ID)
 	obj := h.store.Get(key)
 	if obj != nil {
@@ -88,7 +86,7 @@ func (h *NodeHandler) Create(ctx *gin.Context) {
 }
 
 func (h *NodeHandler) Update(ctx *gin.Context) {
-	nodeName := getNodeName(ctx)
+	nodeID := getNodeID(ctx)
 
 	var request system.Node
 	err := ctx.Bind(&request)
@@ -98,8 +96,8 @@ func (h *NodeHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	if nodeName != request.Name {
-		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: Can't change Node Name."), nil)
+	if nodeID != request.ID {
+		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: Can't change Node ID."), nil)
 		return
 	}
 
@@ -110,7 +108,7 @@ func (h *NodeHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(nodeName)
+	key := getKey(nodeID)
 	obj := h.store.Get(key)
 	if obj == nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: Node `%s` is not found.", request.Name), nil)
@@ -128,9 +126,9 @@ func (h *NodeHandler) Update(ctx *gin.Context) {
 }
 
 func (h *NodeHandler) Delete(ctx *gin.Context) {
-	nodeName := getNodeName(ctx)
+	nodeID := getNodeID(ctx)
 
-	key := getKey(nodeName)
+	key := getKey(nodeID)
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
@@ -141,11 +139,11 @@ func (h *NodeHandler) Delete(ctx *gin.Context) {
 	})
 }
 
-func (h *NodeHandler) isNameDuplicate(node *system.Node) bool {
+func (h *NodeHandler) isIDDuplicate(node *system.Node) bool {
 	list := h.store.List(getKey(""))
 	for _, o := range list {
 		n := o.(system.Node)
-		if n.ID != node.ID && n.Name == node.Name {
+		if n.ID == node.ID {
 			return true
 		}
 	}
@@ -153,18 +151,18 @@ func (h *NodeHandler) isNameDuplicate(node *system.Node) bool {
 }
 
 func (h *NodeHandler) validate(node *system.Node) error {
-	if node.Name == "" {
-		return fmt.Errorf("Error: name is empty.")
+	if node.ID == "" {
+		return fmt.Errorf("Error: id is empty.")
 	}
 
-	if h.isNameDuplicate(node) {
-		return fmt.Errorf("Error: name is empty.")
+	if h.isIDDuplicate(node) {
+		return fmt.Errorf("Error: id is duplicated.")
 	}
 	return nil
 }
 
-func getNodeName(ctx *gin.Context) string {
-	return ctx.Param("node_name")
+func getNodeID(ctx *gin.Context) string {
+	return ctx.Param("node_id")
 }
 
 func getKey(name string) string {

@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/api/system/blockstorage"
@@ -72,8 +71,8 @@ func (h *BlockStorageHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	if request.Name == "" {
-		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: name is empty."), nil)
+	if request.ID == "" {
+		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: id is empty."), nil)
 		return
 	}
 	if request.Spec.RequestSize == "" {
@@ -85,13 +84,6 @@ func (h *BlockStorageHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	id, err := uuid.NewRandom()
-	if err != nil {
-		meta.ResponseJSON(ctx, http.StatusInternalServerError, err, nil)
-		return
-	}
-
-	request.ID = id.String()
 	key := getKey(nsID, request.ID)
 	obj = h.store.Get(key)
 	if obj != nil {

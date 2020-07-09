@@ -2,11 +2,11 @@ package v0
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/api/system/network"
@@ -66,24 +66,18 @@ func (h *NetworkHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	if request.Name == "" {
-		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: name is empty."), nil)
+	if request.ID == "" {
+		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: id is empty."), nil)
 		return
 	}
 
 	obj := h.store.Get(filepath.Join("namespace", nsID))
 	if obj == nil {
+		log.Println("error")
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: namespace is not found."), nil)
 		return
 	}
 
-	id, err := uuid.NewRandom()
-	if err != nil {
-		meta.ResponseJSON(ctx, http.StatusInternalServerError, err, nil)
-		return
-	}
-
-	request.ID = id.String()
 	key := getKey(nsID, request.ID)
 	obj = h.store.Get(key)
 	if obj != nil {

@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	namespaceID = "949bff51-c6bd-42e6-ba9f-01927d9641f6"
+	namespaceID = "test-namespace-00"
 )
 
 func TestNamespaceCreate(t *testing.T) {
@@ -19,7 +19,8 @@ func TestNamespaceCreate(t *testing.T) {
 
 	namespace, err := client.Create(&core.Namespace{
 		Meta: meta.Meta{
-			Name: "test-namespace",
+			ID:   namespaceID,
+			Name: "TEST0",
 		},
 	})
 	if err != nil {
@@ -62,7 +63,7 @@ func TestNamespaceUpdate(t *testing.T) {
 
 	namespace, err := client.Update(&core.Namespace{
 		Meta: meta.Meta{
-			Name: "test-namespace-changed1",
+			Name: "TEST00-changed",
 			ID:   namespaceID,
 		},
 	})

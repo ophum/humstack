@@ -6,22 +6,36 @@ import (
 	"log"
 	"testing"
 
+	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
+	nsv0 "github.com/ophum/humstack/pkg/client/core/namespace/v0"
 )
 
 const (
-	namespace = "ce6954a8-a10c-4f80-a266-af52c991a968"
-	networkID = "6feb0a5c-730f-4ac8-944d-bab10f828f3e"
+	namespaceID = "test-namespace-00"
+	networkID   = "test-network-00"
 )
 
 func TestNetworkCreate(t *testing.T) {
+	nsClient := nsv0.NewNamespaceClient("http", "localhost", 8080)
+	_, err := nsClient.Create(&core.Namespace{
+		Meta: meta.Meta{
+			ID:   namespaceID,
+			Name: "test-ns",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	client := NewNetworkClient("http", "localhost", 8080)
 
-	node, err := client.Create(&system.Network{
+	net, err := client.Create(&system.Network{
 		Meta: meta.Meta{
+			ID:        networkID,
 			Name:      "test-network",
-			Namespace: namespace,
+			Namespace: namespaceID,
 			Annotations: map[string]string{
 				"networkv0/network_type":    "Bridge",
 				"networkv0/default_gateway": "10.0.0.1/24",
@@ -36,7 +50,7 @@ func TestNetworkCreate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	buf, _ := json.Marshal(node)
+	buf, _ := json.Marshal(net)
 	log.Println(string(buf))
 
 }
@@ -44,12 +58,12 @@ func TestNetworkCreate(t *testing.T) {
 func TestNetworkList(t *testing.T) {
 	client := NewNetworkClient("http", "localhost", 8080)
 
-	nodeList, err := client.List(namespace)
+	netList, err := client.List(namespaceID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	buf, _ := json.MarshalIndent(nodeList, "", "  ")
+	buf, _ := json.MarshalIndent(netList, "", "  ")
 	fmt.Println(string(buf))
 
 }
@@ -57,12 +71,12 @@ func TestNetworkList(t *testing.T) {
 func TestNetworkGet(t *testing.T) {
 	client := NewNetworkClient("http", "localhost", 8080)
 
-	node, err := client.Get(namespace, "test-network")
+	net, err := client.Get(namespaceID, networkID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	buf, _ := json.MarshalIndent(node, "", "  ")
+	buf, _ := json.MarshalIndent(net, "", "  ")
 	fmt.Println(string(buf))
 
 }
@@ -70,18 +84,18 @@ func TestNetworkGet(t *testing.T) {
 func TestNetworkUpdate(t *testing.T) {
 	client := NewNetworkClient("http", "localhost", 8080)
 
-	node, err := client.Update(&system.Network{
+	net, err := client.Update(&system.Network{
 		Meta: meta.Meta{
 			ID:        networkID,
 			Name:      "test-network-changed1",
-			Namespace: namespace,
+			Namespace: namespaceID,
 		},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	buf, _ := json.Marshal(node)
+	buf, _ := json.Marshal(net)
 	log.Println(string(buf))
 
 }
@@ -89,7 +103,7 @@ func TestNetworkUpdate(t *testing.T) {
 func TestNetworkDelete(t *testing.T) {
 	client := NewNetworkClient("http", "localhost", 8080)
 
-	err := client.Delete(namespace, networkID)
+	err := client.Delete(namespaceID, networkID)
 	if err != nil {
 		t.Fatal(err)
 	}

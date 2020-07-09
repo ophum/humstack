@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/core/namespace"
 	"github.com/ophum/humstack/pkg/api/meta"
@@ -61,19 +60,12 @@ func (h *NamespaceHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	if request.Name == "" {
-		log.Println("name is empty")
-		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: name is empty."), nil)
+	if request.ID == "" {
+		log.Println("id is empty")
+		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: ID is empty."), nil)
 		return
 	}
 
-	id, err := uuid.NewRandom()
-	if err != nil {
-		meta.ResponseJSON(ctx, http.StatusInternalServerError, err, nil)
-		return
-	}
-
-	request.ID = id.String()
 	key := getKey(request.ID)
 	obj := h.store.Get(key)
 	if obj != nil {

@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/api/system/virtualmachine"
@@ -66,18 +65,11 @@ func (h *VirtualMachineHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	if request.Name == "" {
-		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: name is empty."), nil)
+	if request.ID == "" {
+		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: id is empty."), nil)
 		return
 	}
 
-	id, err := uuid.NewRandom()
-	if err != nil {
-		meta.ResponseJSON(ctx, http.StatusInternalServerError, err, nil)
-		return
-	}
-
-	request.ID = id.String()
 	key := getKey(nsID, request.ID)
 	obj := h.store.Get(key)
 	if obj != nil {
@@ -108,10 +100,6 @@ func (h *VirtualMachineHandler) Update(ctx *gin.Context) {
 
 	if vmID != request.ID {
 		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: Can't change VirtualMachine Name."), nil)
-		return
-	}
-	if request.Name == "" {
-		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: name is empty."), nil)
 		return
 	}
 
