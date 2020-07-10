@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"os/exec"
 	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/n0stack/n0stack/n0core/pkg/driver/iproute2"
+	"github.com/ophum/humstack/pkg/agents/system/network/utils"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
 )
@@ -152,6 +155,41 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		)
 	}
 
+	nics := []string{}
+	tapNames := []string{}
+	brNames := []string{}
+	for i, nic := range vm.Spec.NICs {
+		if nic.MacAddress == "" {
+			nic.MacAddress = generateMacAddress(vm.ID + nic.NetworkID)
+		}
+
+		net, err := a.client.SystemV0().Network().Get(vm.Namespace, nic.NetworkID)
+		if err != nil {
+			return err
+		}
+
+		if _, ok := net.Annotations["networkv0/bridge_name"]; !ok {
+			return fmt.Errorf("network is not active")
+		}
+		tapName := utils.GenerateName("hum-vm-", net.Annotations["networkv0/bridge_name"])
+		tapName = fmt.Sprintf("%s-%02d", tapName[:len(tapName)-3], i)
+
+		tapNames = append(tapNames, tapName)
+		brNames = append(brNames, net.Annotations["networkv0/bridge_name"])
+
+		nics = append(nics,
+			"-device",
+			fmt.Sprintf("virtio-net,netdev=netdev-%s,driver=virtio-net-pci,mac=%s",
+				net.Annotations["networkv0/bridge_name"],
+				nic.MacAddress),
+			"-netdev",
+			fmt.Sprintf("tap,script=no,downscript=no,id=netdev-%s,vhost=on,ifname=%s",
+				net.Annotations["networkv0/bridge_name"],
+				tapName,
+			),
+		)
+	}
+
 	_, err = uuid.FromBytes([]byte(vm.Spec.UUID))
 	if err != nil {
 		id, err := uuid.NewRandom()
@@ -185,6 +223,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 	}
 
 	args = append(args, disks...)
+	args = append(args, nics...)
 
 	log.Printf("create vm `%s`", vm.ID)
 	log.Println(command, args)
@@ -195,7 +234,29 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		return err
 	}
 
+	for i, tapName := range tapNames {
+		br, err := iproute2.NewBridge(brNames[i])
+		if err != nil {
+			return err
+		}
+
+		tap, err := iproute2.NewTap(tapName)
+		if err != nil {
+			return err
+		}
+		err = tap.Up()
+		if err != nil {
+			return err
+		}
+
+		err = tap.SetMaster(br)
+		if err != nil {
+			return err
+		}
+	}
+
 	pid, err = getPID(vm.Spec.UUID)
+
 	if err != nil {
 		log.Println(err.Error())
 		return err
@@ -279,4 +340,17 @@ func withUnitToWithoutUnit(numberWithUnit string) string {
 		return fmt.Sprintf("%d", number/1000)
 	}
 	return "0"
+}
+
+func generateMacAddress(id string) string {
+	addr := "52:54"
+	for i := 0; i < 4; i++ {
+		addr = fmt.Sprintf("%s:%02x", addr, random(0, 255))
+	}
+	return addr
+}
+
+func random(min, max int) int {
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(max-min) + min
 }

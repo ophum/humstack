@@ -10,6 +10,7 @@ import (
 	"github.com/ophum/humstack/pkg/api/system"
 	nsv0 "github.com/ophum/humstack/pkg/client/core/namespace/v0"
 	bsv0 "github.com/ophum/humstack/pkg/client/system/blockstorage/v0"
+	netv0 "github.com/ophum/humstack/pkg/client/system/network/v0"
 )
 
 const (
@@ -73,6 +74,26 @@ func TestVirtualMachineCreate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	netClient := netv0.NewNetworkClient("http", "localhost", 8080)
+	net, err := netClient.Create(&system.Network{
+		Meta: meta.Meta{
+			ID:        "test-net",
+			Name:      "test-net",
+			Namespace: ns.ID,
+			Annotations: map[string]string{
+				"networkv0/network_type":    "Bridge",
+				"networkv0/default_gateway": "10.0.0.254/24",
+			},
+		},
+		Spec: system.NetworkSpec{
+			ID:       "100",
+			IPv4CIDR: "10.0.0.0/24",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	client := NewVirtualMachineClient("http", "localhost", 8080)
 	vm, err := client.Create(&system.VirtualMachine{
 		Meta: meta.Meta{
@@ -91,6 +112,13 @@ func TestVirtualMachineCreate(t *testing.T) {
 			BlockStorageIDs: []string{
 				bs.ID,
 				bs2.ID,
+			},
+			NICs: []*system.VirtualMachineNIC{
+				{
+					NetworkID:      net.ID,
+					IPv4Address:    "10.10.0.1",
+					DefaultGateway: "10.10.0.254",
+				},
 			},
 			ActionState: system.VirtualMachineActionStatePowerOn,
 		},
