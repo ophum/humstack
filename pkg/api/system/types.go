@@ -101,10 +101,8 @@ type VirtualMachineNIC struct {
 type VirtualMachineActionState string
 
 const (
-	VirtualMachineActionStateStart  VirtualMachineActionState = "Start"
-	VirtualMachineActionStateStop   VirtualMachineActionState = "Stop"
-	VirtualMachineActionStateReboot VirtualMachineActionState = "Reboot"
-	VirtualMachineActionStateDone   VirtualMachineActionState = "Done"
+	VirtualMachineActionStatePowerOn  VirtualMachineActionState = "PowerOn"
+	VirtualMachineActionStatePowerOff VirtualMachineActionState = "PowerOff"
 )
 
 type VirtualMachineSpec struct {
@@ -128,8 +126,10 @@ type VirtualMachineSpec struct {
 type VirtualMachineState string
 
 const (
-	VirtualMachineStateRunning VirtualMachineState = "Running"
-	VirtualMachineStatePending VirtualMachineState = "Pending"
+	VirtualMachineStateRunning  VirtualMachineState = "Running"
+	VirtualMachineStatePending  VirtualMachineState = "Pending"
+	VirtualMachineStateStopping VirtualMachineState = "Stopping"
+	VirtualMachineStateStopped  VirtualMachineState = "Stopped"
 )
 
 type VirtualMachineStatus struct {

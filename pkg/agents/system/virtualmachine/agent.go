@@ -82,13 +82,50 @@ func (a *VirtualMachineAgent) Run() {
 	}
 }
 
-func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) error {
+func (a *VirtualMachineAgent) powerOffVirtualMachine(vm *system.VirtualMachine) error {
+	pid, err := getPID(vm.Spec.UUID)
+	if err != nil {
+		return err
+	}
+	if pid == -1 {
+		if vm.Status.State != system.VirtualMachineStateStopped {
+			vm.Status.State = system.VirtualMachineStateStopped
+			_, err := a.client.SystemV0().VirtualMachine().Update(vm)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	vm.Status.State = system.VirtualMachineStateStopping
+	_, err = a.client.SystemV0().VirtualMachine().Update(vm)
+	if err != nil {
+		return err
+	}
+
+	p, err := os.FindProcess(int(pid))
+	if err != nil {
+		return err
+	}
+
+	err = p.Kill()
+	if err != nil {
+		return err
+	}
+
+	vm.Status.State = system.VirtualMachineStateStopped
+	_, err = a.client.SystemV0().VirtualMachine().Update(vm)
+	return err
+}
+
+func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) error {
 	pid, err := getPID(vm.Spec.UUID)
 	if err != nil {
 		return err
 	}
 
-	if pid != "" && vm.Status.State == system.VirtualMachineStateRunning {
+	if pid != -1 && vm.Status.State == system.VirtualMachineStateRunning {
 		return nil
 	}
 
@@ -163,12 +200,28 @@ func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) erro
 		log.Println(err.Error())
 		return err
 	}
-	vm.Annotations["virtualmachinev0/pid"] = pid
+	vm.Annotations["virtualmachinev0/pid"] = fmt.Sprint(pid)
 	vm.Status.State = system.VirtualMachineStateRunning
+	return nil
+}
+
+func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) error {
+	switch vm.Spec.ActionState {
+	case system.VirtualMachineActionStatePowerOn:
+		err := a.powerOnVirtualMachine(vm)
+		if err != nil {
+			return err
+		}
+	case system.VirtualMachineActionStatePowerOff:
+		err := a.powerOffVirtualMachine(vm)
+		if err != nil {
+			return err
+		}
+	}
 	return setHash(vm)
 }
 
-func getPID(uuid string) (string, error) {
+func getPID(uuid string) (int64, error) {
 	command := "sh"
 	args := []string{
 		"-c",
@@ -178,7 +231,11 @@ func getPID(uuid string) (string, error) {
 	log.Println(command, args)
 	cmd := exec.Command(command, args...)
 	out, err := cmd.CombinedOutput()
-	return string(out), err
+	if string(out) == "" || err != nil {
+		return -1, err
+	}
+
+	return strconv.ParseInt(string(out), 10, 64)
 }
 
 func setHash(vm *system.VirtualMachine) error {

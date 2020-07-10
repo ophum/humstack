@@ -92,7 +92,7 @@ func TestVirtualMachineCreate(t *testing.T) {
 				bs.ID,
 				bs2.ID,
 			},
-			ActionState: system.VirtualMachineActionStateStart,
+			ActionState: system.VirtualMachineActionStatePowerOn,
 		},
 	})
 	if err != nil {
@@ -100,5 +100,41 @@ func TestVirtualMachineCreate(t *testing.T) {
 	}
 
 	buf, _ := json.MarshalIndent(vm, "", "  ")
+	log.Println(string(buf))
+}
+
+func TestVirtualMachinePowerOff(t *testing.T) {
+	client := NewVirtualMachineClient("http", "localhost", 8080)
+
+	vm, err := client.Get("test-ns", "test-vm")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vm.Spec.ActionState = system.VirtualMachineActionStatePowerOff
+	newVM, err := client.Update(vm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	buf, _ := json.MarshalIndent(newVM, "", "  ")
+	log.Println(string(buf))
+}
+
+func TestVirtualMachinePowerOn(t *testing.T) {
+	client := NewVirtualMachineClient("http", "localhost", 8080)
+
+	vm, err := client.Get("test-ns", "test-vm")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vm.Spec.ActionState = system.VirtualMachineActionStatePowerOn
+	newVM, err := client.Update(vm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	buf, _ := json.MarshalIndent(newVM, "", "  ")
 	log.Println(string(buf))
 }
