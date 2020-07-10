@@ -83,26 +83,29 @@ func (a *VirtualMachineAgent) Run() {
 }
 
 func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) error {
-	if vm.Status.State == system.VirtualMachineStateRunning {
+	pid, err := getPID(vm.Spec.UUID)
+	if err != nil {
+		return err
+	}
+
+	if pid != "" && vm.Status.State == system.VirtualMachineStateRunning {
 		return nil
+	}
+
+	vm.Status.State = system.VirtualMachineStatePending
+	if _, err = a.client.SystemV0().VirtualMachine().Update(vm); err != nil {
+		return err
 	}
 
 	disks := []string{}
 	for _, bsID := range vm.Spec.BlockStorageIDs {
 		bs, err := a.client.SystemV0().BlockStorage().Get(vm.Namespace, bsID)
 		if err != nil {
-			vm.Status.State = system.VirtualMachineStatePending
-			if _, err = a.client.SystemV0().VirtualMachine().Update(vm); err != nil {
-				return err
-			}
 			return err
 		}
 
 		if bs.Status.State != system.BlockStorageStateActive {
 			vm.Status.State = system.VirtualMachineStatePending
-			if _, err = a.client.SystemV0().VirtualMachine().Update(vm); err != nil {
-				return err
-			}
 			return fmt.Errorf("BlockStorage is not active")
 		}
 
@@ -112,7 +115,7 @@ func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) erro
 		)
 	}
 
-	_, err := uuid.FromBytes([]byte(vm.Spec.UUID))
+	_, err = uuid.FromBytes([]byte(vm.Spec.UUID))
 	if err != nil {
 		id, err := uuid.NewRandom()
 		if err != nil {
@@ -155,7 +158,7 @@ func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) erro
 		return err
 	}
 
-	pid, err := getPID(vm.Spec.UUID)
+	pid, err = getPID(vm.Spec.UUID)
 	if err != nil {
 		log.Println(err.Error())
 		return err
