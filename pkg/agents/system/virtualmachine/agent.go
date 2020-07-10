@@ -7,10 +7,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
 )
@@ -67,6 +67,7 @@ func (a *VirtualMachineAgent) Run() {
 
 					if vm.ResourceHash == oldHash {
 						log.Printf("vm(`%s`) no update.\n", vm.ID)
+						continue
 					}
 
 					_, err := a.client.SystemV0().VirtualMachine().Update(vm)
@@ -86,14 +87,49 @@ func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) erro
 		return nil
 	}
 
+	disks := []string{}
+	for _, bsID := range vm.Spec.BlockStorageIDs {
+		bs, err := a.client.SystemV0().BlockStorage().Get(vm.Namespace, bsID)
+		if err != nil {
+			vm.Status.State = system.VirtualMachineStatePending
+			if _, err = a.client.SystemV0().VirtualMachine().Update(vm); err != nil {
+				return err
+			}
+			return err
+		}
+
+		if bs.Status.State != system.BlockStorageStateActive {
+			vm.Status.State = system.VirtualMachineStatePending
+			if _, err = a.client.SystemV0().VirtualMachine().Update(vm); err != nil {
+				return err
+			}
+			return fmt.Errorf("BlockStorage is not active")
+		}
+
+		disks = append(disks,
+			"-drive",
+			fmt.Sprintf("file=./blockstorages/%s/%s,format=qcow2", vm.Namespace, bs.ID),
+		)
+	}
+
+	_, err := uuid.FromBytes([]byte(vm.Spec.UUID))
+	if err != nil {
+		id, err := uuid.NewRandom()
+		if err != nil {
+			return err
+		}
+
+		vm.Spec.UUID = id.String()
+	}
+
 	vcpus := withUnitToWithoutUnit(vm.Spec.LimitVcpus)
 	command := "qemu-system-x86_64"
 	args := []string{
 		"-enable-kvm",
 		"-uuid",
-		vm.ID,
+		vm.Spec.UUID,
 		"-name",
-		fmt.Sprintf("guest=%s,debug-threads=on", vm.Name),
+		fmt.Sprintf("guest=%s/%s,debug-threads=on", vm.Namespace, vm.ID),
 		"-daemonize",
 		"-nodefaults",
 		"-vnc",
@@ -106,19 +142,40 @@ func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) erro
 		vm.Spec.LimitMemory,
 		"-device",
 		"VGA,id=video0,bus=pci.0",
-		filepath.Join("./blockstorages", vm.Namespace, vm.Spec.BlockStorageNames[0]),
 	}
+
+	args = append(args, disks...)
 
 	log.Printf("create vm `%s`", vm.ID)
 	log.Println(command, args)
+
 	cmd := exec.Command(command, args...)
 	if _, err := cmd.CombinedOutput(); err != nil {
 		log.Println(err.Error())
 		return err
 	}
 
+	pid, err := getPID(vm.Spec.UUID)
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	vm.Annotations["virtualmachinev0/pid"] = pid
 	vm.Status.State = system.VirtualMachineStateRunning
 	return setHash(vm)
+}
+
+func getPID(uuid string) (string, error) {
+	command := "sh"
+	args := []string{
+		"-c",
+		fmt.Sprintf(`ps aux | grep qemu | grep -v grep | grep '%s' | awk '{print $2}' | tr -d '\n'`, uuid),
+	}
+
+	log.Println(command, args)
+	cmd := exec.Command(command, args...)
+	out, err := cmd.CombinedOutput()
+	return string(out), err
 }
 
 func setHash(vm *system.VirtualMachine) error {

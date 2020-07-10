@@ -108,13 +108,15 @@ const (
 )
 
 type VirtualMachineSpec struct {
+	UUID string `json:"uuid" yaml:"uuid"`
+
 	RequestVcpus string `json:"requestVcpus" yaml:"requestVcpus"`
 	LimitVcpus   string `json:"limitVcpus" yaml:"limitVcpus"`
 
 	RequestMemory string `json:"requestMemory" yaml:"requestMemory"`
 	LimitMemory   string `json:"limitMemory" yaml:"limitMemory"`
 
-	BlockStorageNames []string `json:"blockStorageNames" yaml:"blockStorageNames"`
+	BlockStorageIDs []string `json:"blockStorageIDs" yaml:"blockStorageIDs"`
 
 	NICs []*VirtualMachineNIC `json:"nics" yaml:"nics"`
 
@@ -127,6 +129,7 @@ type VirtualMachineState string
 
 const (
 	VirtualMachineStateRunning VirtualMachineState = "Running"
+	VirtualMachineStatePending VirtualMachineState = "Pending"
 )
 
 type VirtualMachineStatus struct {

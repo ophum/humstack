@@ -22,6 +22,7 @@ func main() {
 
 	nodeAgent := node.NewNodeAgent(system.Node{
 		Meta: meta.Meta{
+			ID:   hostname,
 			Name: hostname,
 		},
 		Spec: system.NodeSpec{

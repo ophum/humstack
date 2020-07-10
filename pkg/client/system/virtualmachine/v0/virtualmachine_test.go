@@ -13,13 +13,14 @@ import (
 )
 
 const (
-	ImageURL = "http://192.168.20.2:8082/bionic-server-cloudimg-amd64.img"
+	ImageURL = "http://localhost:8082/focal-server-cloudimg-amd64.img"
 )
 
 func TestVirtualMachineCreate(t *testing.T) {
 	nsClient := nsv0.NewNamespaceClient("http", "localhost", 8080)
 	ns, err := nsClient.Create(&core.Namespace{
 		Meta: meta.Meta{
+			ID:   "test-ns",
 			Name: "test-ns",
 		},
 	})
@@ -29,11 +30,12 @@ func TestVirtualMachineCreate(t *testing.T) {
 	bsClient := bsv0.NewBlockStorageClient("http", "localhost", 8080)
 	bs, err := bsClient.Create(&system.BlockStorage{
 		Meta: meta.Meta{
+			ID:        "test-bs",
 			Name:      "test-bs",
 			Namespace: ns.ID,
 			Annotations: map[string]string{
 				"blockstoragev0/type":      "Local",
-				"blockstoragev0/node_name": "developvbox",
+				"blockstoragev0/node_name": "X1Carbon",
 			},
 		},
 		Spec: system.BlockStorageSpec{
@@ -50,13 +52,35 @@ func TestVirtualMachineCreate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bs2, err := bsClient.Create(&system.BlockStorage{
+		Meta: meta.Meta{
+			ID:        "test-bs2",
+			Name:      "test-bs2",
+			Namespace: ns.ID,
+			Annotations: map[string]string{
+				"blockstoragev0/type":      "Local",
+				"blockstoragev0/node_name": "X1Carbon",
+			},
+		},
+		Spec: system.BlockStorageSpec{
+			RequestSize: "10G",
+			LimitSize:   "10G",
+			From: system.BlockStorageFrom{
+				Type: system.BlockStorageFromTypeEmpty,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	client := NewVirtualMachineClient("http", "localhost", 8080)
 	vm, err := client.Create(&system.VirtualMachine{
 		Meta: meta.Meta{
+			ID:        "test-vm",
 			Name:      "test-vm",
 			Namespace: ns.ID,
 			Annotations: map[string]string{
-				"virtualmachinev0/node_name": "developvbox",
+				"virtualmachinev0/node_name": "X1Carbon",
 			},
 		},
 		Spec: system.VirtualMachineSpec{
@@ -64,8 +88,9 @@ func TestVirtualMachineCreate(t *testing.T) {
 			LimitMemory:   "1G",
 			RequestVcpus:  "2000m",
 			LimitVcpus:    "2000m",
-			BlockStorageNames: []string{
+			BlockStorageIDs: []string{
 				bs.ID,
+				bs2.ID,
 			},
 			ActionState: system.VirtualMachineActionStateStart,
 		},
