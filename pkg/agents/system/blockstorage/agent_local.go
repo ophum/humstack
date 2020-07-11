@@ -20,7 +20,10 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 	log.Printf("==> %s", path)
 
 	if fileIsExists(path) {
-		return nil
+		if bs.Status.State == "" || bs.Status.State == system.BlockStorageStatePending {
+			bs.Status.State = system.BlockStorageStateActive
+		}
+		return setHash(bs)
 	}
 
 	if !fileIsExists(dirPath) {
@@ -69,6 +72,18 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 		err = file.Close()
 		if err != nil {
 			log.Println(err)
+			return err
+		}
+
+		command := "qemu-img"
+		args := []string{
+			"resize",
+			path,
+			withUnitToWithoutUnit(bs.Spec.LimitSize),
+		}
+		cmd := exec.Command(command, args...)
+		if _, err := cmd.CombinedOutput(); err != nil {
+			log.Println(err.Error())
 			return err
 		}
 	}

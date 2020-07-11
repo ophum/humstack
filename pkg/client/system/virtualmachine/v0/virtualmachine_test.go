@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	ImageURL = "http://localhost:8082/focal-server-cloudimg-amd64.img"
+	imageURL = "http://192.168.20.2:8082/focal-server-cloudimg-amd64.img"
+	nodeName = "developvbox"
 )
 
 func TestVirtualMachineCreate(t *testing.T) {
@@ -36,7 +37,7 @@ func TestVirtualMachineCreate(t *testing.T) {
 			Namespace: ns.ID,
 			Annotations: map[string]string{
 				"blockstoragev0/type":      "Local",
-				"blockstoragev0/node_name": "X1Carbon",
+				"blockstoragev0/node_name": nodeName,
 			},
 		},
 		Spec: system.BlockStorageSpec{
@@ -45,7 +46,7 @@ func TestVirtualMachineCreate(t *testing.T) {
 			From: system.BlockStorageFrom{
 				Type: system.BlockStorageFromTypeHTTP,
 				HTTP: system.BlockStorageFromHTTP{
-					URL: ImageURL,
+					URL: imageURL,
 				},
 			},
 		},
@@ -60,7 +61,7 @@ func TestVirtualMachineCreate(t *testing.T) {
 			Namespace: ns.ID,
 			Annotations: map[string]string{
 				"blockstoragev0/type":      "Local",
-				"blockstoragev0/node_name": "X1Carbon",
+				"blockstoragev0/node_name": nodeName,
 			},
 		},
 		Spec: system.BlockStorageSpec{
@@ -101,7 +102,7 @@ func TestVirtualMachineCreate(t *testing.T) {
 			Name:      "test-vm",
 			Namespace: ns.ID,
 			Annotations: map[string]string{
-				"virtualmachinev0/node_name": "X1Carbon",
+				"virtualmachinev0/node_name": nodeName,
 			},
 		},
 		Spec: system.VirtualMachineSpec{

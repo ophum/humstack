@@ -66,6 +66,7 @@ func (a *BlockStorageAgent) Run() {
 
 						err = a.syncLocalBlockStorage(bs)
 						if err != nil {
+							log.Println(err)
 							continue
 						}
 					}
