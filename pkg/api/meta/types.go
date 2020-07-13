@@ -12,6 +12,14 @@ const (
 
 type ResourceType string
 
+type DeleteState string
+
+const (
+	DeleteStateNone   DeleteState = "None"
+	DeleteStateDelete DeleteState = "Delete"
+	DeleteStateDone   DeleteState = "Done"
+)
+
 type Meta struct {
 	ID           string            `json:"id" yaml:"id"`
 	Name         string            `json:"name" yaml:"name"`
@@ -19,5 +27,6 @@ type Meta struct {
 	Annotations  map[string]string `json:"annotations" yaml:"annotations"`
 	Labels       map[string]string `json:"labels" yaml:"labels"`
 	ResourceHash string            `json:"resourceHash" yaml:"resourceHash"`
+	DeleteState  DeleteState       `json:"deleteState" yaml:"deleteState"`
 	APIType      APIType           `json:"apiType" yaml:"apiType"`
 }

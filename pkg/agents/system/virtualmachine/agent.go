@@ -23,6 +23,8 @@ import (
 
 type VirtualMachineAgent struct {
 	client *client.Clients
+
+	vncDisplayMap map[int32]bool
 }
 
 const (
@@ -31,7 +33,8 @@ const (
 
 func NewVirtualMachineAgent(client *client.Clients) *VirtualMachineAgent {
 	return &VirtualMachineAgent{
-		client: client,
+		client:        client,
+		vncDisplayMap: map[int32]bool{},
 	}
 }
 
@@ -120,6 +123,9 @@ func (a *VirtualMachineAgent) powerOffVirtualMachine(vm *system.VirtualMachine) 
 		return err
 	}
 
+	displayNumberString := vm.Annotations["virtualmachinev0/vnc_display_number"]
+	displayNumber, err := strconv.ParseInt(displayNumberString, 10, 64)
+	delete(a.vncDisplayMap, int32(displayNumber))
 	vm.Status.State = system.VirtualMachineStateStopped
 	_, err = a.client.SystemV0().VirtualMachine().Update(vm)
 	return err
@@ -263,6 +269,16 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		fmt.Sprintf("file=./virtualmachines/%s/%s/cloudinit.img,format=raw", vm.Namespace, vm.Spec.UUID),
 	)
 
+	displayNumber := int32(0)
+	for ; displayNumber < 1000; displayNumber++ {
+		if is, ok := a.vncDisplayMap[displayNumber]; ok && is {
+			continue
+		}
+
+		a.vncDisplayMap[displayNumber] = true
+		break
+	}
+
 	vcpus := withUnitToWithoutUnit(vm.Spec.LimitVcpus)
 	command := "qemu-system-x86_64"
 	args := []string{
@@ -274,7 +290,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		"-daemonize",
 		"-nodefaults",
 		"-vnc",
-		fmt.Sprintf("0.0.0.0:1"),
+		fmt.Sprintf("0.0.0.0:%d", displayNumber),
 		"-smp",
 		fmt.Sprintf("%s,sockets=1,cores=%s,threads=1", vcpus, vcpus),
 		"-cpu",
@@ -325,6 +341,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		return err
 	}
 	vm.Annotations["virtualmachinev0/pid"] = fmt.Sprint(pid)
+	vm.Annotations["virtualmachinev0/vnc_display_number"] = fmt.Sprint(displayNumber)
 	vm.Status.State = system.VirtualMachineStateRunning
 	return nil
 }
