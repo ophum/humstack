@@ -13,6 +13,7 @@ var (
 		Use:   "humstack",
 		Short: "humstack cli",
 	}
+	namespace string
 )
 
 func Execute() error {
@@ -23,6 +24,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file")
+	rootCmd.PersistentFlags().StringVar(&namespace, "n", "default", "namespace id")
 
 }
 
