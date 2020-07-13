@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 	"github.com/ophum/humstack/pkg/agents/system/network/utils"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
+	"github.com/ophum/humstack/pkg/utils/cloudinit"
 )
 
 type VirtualMachineAgent struct {
@@ -199,6 +202,66 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 
 		vm.Spec.UUID = id.String()
 	}
+
+	metaData := cloudinit.MetaData{
+		InstanceID:    vm.Spec.UUID,
+		LocalHostName: vm.Name,
+	}
+
+	userDataUsers := []cloudinit.UserDataUser{}
+	for _, user := range vm.Spec.LoginUsers {
+		userDataUsers = append(userDataUsers, cloudinit.UserDataUser{
+			Name:              user.Username,
+			SSHAuthorizedKeys: user.SSHAuthorizedKeys,
+			Groups:            "sudo",
+			Shell:             "/bin/bash",
+			Sudo: []string{
+				"ALL=(ALL) NOPASSWD:ALL",
+			},
+		})
+	}
+	userData := cloudinit.UserData{
+		Users: userDataUsers,
+	}
+
+	networkConfigConfigs := []cloudinit.NetworkConfigConfig{}
+	for i, nic := range vm.Spec.NICs {
+		// 上のやつと統合するべき
+		n, err := a.client.SystemV0().Network().Get(vm.Namespace, nic.NetworkID)
+		if err != nil {
+			return err
+		}
+		_, ipnet, err := net.ParseCIDR(n.Spec.IPv4CIDR)
+
+		networkConfigConfigs = append(networkConfigConfigs, cloudinit.NetworkConfigConfig{
+			Type:       cloudinit.NetworkConfigConfigTypePhysical,
+			Name:       fmt.Sprintf("eth%d", i),
+			MacAddress: nic.MacAddress,
+			Subnets: []cloudinit.NetworkConfigConfigSubnet{
+				{
+					Type:    cloudinit.NetworkConfigConfigSubnetTypeStatic,
+					Address: nic.IPv4Address,
+					Netmask: fmt.Sprintf("%d.%d.%d.%d",
+						ipnet.Mask[0],
+						ipnet.Mask[1],
+						ipnet.Mask[2],
+						ipnet.Mask[3],
+					),
+				},
+			},
+		})
+	}
+	networkConfig := cloudinit.NetworkConfig{
+		Version: 1,
+		Config:  networkConfigConfigs,
+	}
+
+	ci := cloudinit.NewCloudInit(metaData, userData, networkConfig)
+	ci.Output(filepath.Join("./virtualmachines", vm.Namespace))
+	disks = append(disks,
+		"-drive",
+		fmt.Sprintf("file=./virtualmachines/%s/%s/cloudinit.img,format=raw", vm.Namespace, vm.Spec.UUID),
+	)
 
 	vcpus := withUnitToWithoutUnit(vm.Spec.LimitVcpus)
 	command := "qemu-system-x86_64"
