@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 )
 
@@ -135,6 +136,18 @@ func (c *VirtualMachineClient) Delete(namespaceID, virtualMachineID string) erro
 	}
 	return err
 
+}
+
+func (c *VirtualMachineClient) DeleteState(namespaceID, virtualMachineID string) error {
+	vm, err := c.Get(namespaceID, virtualMachineID)
+	if err != nil {
+		return err
+	}
+
+	vm.DeleteState = meta.DeleteStateDelete
+
+	_, err = c.Update(vm)
+	return err
 }
 
 func (c *VirtualMachineClient) getPath(namespaceID, virtualMachineID string) string {

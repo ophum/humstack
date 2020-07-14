@@ -175,3 +175,13 @@ func TestVirtualMachinePowerOn(t *testing.T) {
 	buf, _ := json.MarshalIndent(newVM, "", "  ")
 	log.Println(string(buf))
 }
+
+func TestVirtualMachineDeleteState(t *testing.T) {
+	client := NewVirtualMachineClient("http", "localhost", 8080)
+
+	err := client.DeleteState("test-ns", "test-vm")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+}

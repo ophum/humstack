@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/n0stack/n0stack/n0core/pkg/driver/iproute2"
 	"github.com/ophum/humstack/pkg/agents/system/network/utils"
+	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
 	"github.com/ophum/humstack/pkg/utils/cloudinit"
@@ -347,13 +348,31 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 }
 
 func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) error {
+	log.Printf("[VM] %s/%s", vm.Namespace, vm.ID)
+	if vm.DeleteState == meta.DeleteStateDelete {
+		log.Println("[VM] ==> DELETING")
+		log.Println("[VM] ====> POWER OFF")
+		err := a.powerOffVirtualMachine(vm)
+		if err != nil {
+			return err
+		}
+
+		err = a.client.SystemV0().VirtualMachine().Delete(vm.Namespace, vm.ID)
+		if err != nil {
+			return err
+		}
+		log.Println("[VM] ====> DELETED")
+		return nil
+	}
 	switch vm.Spec.ActionState {
 	case system.VirtualMachineActionStatePowerOn:
+		log.Println("[VM] ==> POWER ON")
 		err := a.powerOnVirtualMachine(vm)
 		if err != nil {
 			return err
 		}
 	case system.VirtualMachineActionStatePowerOff:
+		log.Println("[VM] ==> POWER OFF")
 		err := a.powerOffVirtualMachine(vm)
 		if err != nil {
 			return err

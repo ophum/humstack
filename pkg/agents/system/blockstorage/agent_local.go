@@ -23,7 +23,7 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 	if fileIsExists(path) {
 		// 削除処理
 		if bs.DeleteState == meta.DeleteStateDelete {
-			log.Println("[BS] ====> DELETING")
+			log.Println("[BS] ==> DELETING")
 			bs.Status.State = system.BlockStorageStateDeleting
 			_, err := a.client.SystemV0().BlockStorage().Update(bs)
 			if err != nil {
@@ -40,7 +40,7 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 				return err
 			}
 
-			log.Println("[BS] ======> DELETED")
+			log.Println("[BS] ====> DELETED")
 			return nil
 		}
 		if bs.Status.State == "" || bs.Status.State == system.BlockStorageStatePending {
