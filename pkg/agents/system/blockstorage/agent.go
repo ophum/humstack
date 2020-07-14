@@ -47,17 +47,59 @@ func (a *BlockStorageAgent) Run() {
 		case <-ticker.C:
 			nsList, err := a.client.CoreV0().Namespace().List()
 			if err != nil {
+				log.Printf("[BS] %s", err.Error())
 				continue
 			}
 
 			for _, ns := range nsList {
 				bsList, err := a.client.SystemV0().BlockStorage().List(ns.ID)
 				if err != nil {
+					log.Printf("[BS] %s", err.Error())
 					continue
+				}
+
+				vmList, err := a.client.SystemV0().VirtualMachine().List(ns.ID)
+				if err != nil {
+					log.Printf("[BS] %s", err.Error())
+					continue
+				}
+				usedBSIDs := []string{}
+				for _, vm := range vmList {
+					if vm.Status.State == system.VirtualMachineStateRunning {
+						usedBSIDs = append(usedBSIDs, vm.Spec.BlockStorageIDs...)
+					}
 				}
 
 				for _, bs := range bsList {
 					oldHash := bs.ResourceHash
+
+					// state check
+					if bs.Status.State != system.BlockStorageStateDeleting &&
+						bs.Status.State != system.BlockStorageStatePending {
+
+						oldState := bs.Status.State
+						bs.Status.State = system.BlockStorageStateActive
+						log.Println("====")
+						log.Println(usedBSIDs)
+						for i, usedID := range usedBSIDs {
+							if bs.ID == usedID {
+								bs.Status.State = system.BlockStorageStateUsed
+								usedBSIDs = append(usedBSIDs[:i], usedBSIDs[i+1:]...)
+								break
+							}
+						}
+						log.Println(usedBSIDs)
+						log.Println("====")
+
+						if bs.Status.State != oldState {
+							bs, err = a.client.SystemV0().BlockStorage().Update(bs)
+							if err != nil {
+								log.Println(err)
+								continue
+							}
+						}
+					}
+
 					switch bs.Annotations[BlockStorageV0AnnotationType] {
 					case BlockStorageV0BlockStorageTypeLocal:
 						if bs.Annotations[BlockStorageV0AnnotationNodeName] != nodeName {
