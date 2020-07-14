@@ -10,19 +10,44 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 )
 
 func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error {
 	dirPath := filepath.Join(a.localBlockStorageDirectory, bs.Namespace)
 	path := filepath.Join(dirPath, bs.ID)
-	log.Printf("BLOCKSTORAGE: %s\n", bs.Name)
-	log.Printf("==> %s", path)
+	log.Printf("[BS] %s\n", bs.Name)
+	log.Printf("[BS] ==> %s", path)
 
 	if fileIsExists(path) {
+		// 削除処理
+		if bs.DeleteState == meta.DeleteStateDelete {
+			log.Println("[BS] ====> DELETING")
+			bs.Status.State = system.BlockStorageStateDeleting
+			_, err := a.client.SystemV0().BlockStorage().Update(bs)
+			if err != nil {
+				return err
+			}
+
+			err = os.Remove(path)
+			if err != nil {
+				return err
+			}
+
+			err = a.client.SystemV0().BlockStorage().Delete(bs.Namespace, bs.ID)
+			if err != nil {
+				return err
+			}
+
+			log.Println("[BS] ======> DELETED")
+			return nil
+		}
 		if bs.Status.State == "" || bs.Status.State == system.BlockStorageStatePending {
 			bs.Status.State = system.BlockStorageStateActive
 		}
+		log.Println("[BS] ====> ALREADY ACTIVE")
+
 		return setHash(bs)
 	}
 
@@ -35,6 +60,7 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 
 	switch bs.Spec.From.Type {
 	case system.BlockStorageFromTypeEmpty:
+		log.Println("[BS] ====> CREATE EMPTY IMAGE")
 		command := "qemu-img"
 		args := []string{
 			"create",
@@ -49,7 +75,7 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 			return err
 		}
 	case system.BlockStorageFromTypeHTTP:
-		log.Printf("Download: %s\n", bs.Spec.From.HTTP.URL)
+		log.Printf("[BS] ====> DOWNLOAD: %s\n", bs.Spec.From.HTTP.URL)
 		res, err := http.Get(bs.Spec.From.HTTP.URL)
 		if err != nil {
 			log.Println(err)

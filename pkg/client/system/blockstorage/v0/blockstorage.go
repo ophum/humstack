@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 )
 
@@ -135,6 +136,18 @@ func (c *BlockStorageClient) Delete(namespaceID, blockStorageID string) error {
 	}
 	return err
 
+}
+
+func (c *BlockStorageClient) DeleteState(namespaceID, blockStorageID string) error {
+	bs, err := c.Get(namespaceID, blockStorageID)
+	if err != nil {
+		return err
+	}
+
+	bs.DeleteState = meta.DeleteStateDelete
+
+	_, err = c.Update(bs)
+	return err
 }
 
 func (c *BlockStorageClient) getPath(namespaceID, blockStorageID string) string {

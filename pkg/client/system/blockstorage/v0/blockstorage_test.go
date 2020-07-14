@@ -40,7 +40,7 @@ func TestBlockStorageCreateEmpty(t *testing.T) {
 			Namespace: ns.ID,
 			Annotations: map[string]string{
 				"blockstoragev0/type":      "Local",
-				"blockstoragev0/node_name": "developvbox",
+				"blockstoragev0/node_name": "X1Carbon",
 			},
 		},
 		Spec: system.BlockStorageSpec{
@@ -123,4 +123,14 @@ func TestBlockStorageGet(t *testing.T) {
 
 	buf, _ := json.MarshalIndent(bsList, "", "  ")
 	log.Println(string(buf))
+}
+
+func TestBlockStorageDeleteState(t *testing.T) {
+	client := NewBlockStorageClient("http", "localhost", 8080)
+
+	err := client.DeleteState(namespaceID, blockStorageID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 }
