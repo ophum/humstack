@@ -93,11 +93,12 @@ type VirtualMachineLoginUser struct {
 }
 
 type VirtualMachineNIC struct {
-	NetworkID      string `json:"networkID" yaml:"networkID"`
-	MacAddress     string `json:"macAddress" yaml:"macAddress"`
-	IPv4Address    string `json:"ipv4Address" yaml:"ipv4Address"`
-	IPv6Address    string `json:"ipv6Address" yaml:"ipv6Address"`
-	DefaultGateway string `json:"defaultGateway" yaml:"defaultGateway"`
+	NetworkID      string   `json:"networkID" yaml:"networkID"`
+	MacAddress     string   `json:"macAddress" yaml:"macAddress"`
+	IPv4Address    string   `json:"ipv4Address" yaml:"ipv4Address"`
+	IPv6Address    string   `json:"ipv6Address" yaml:"ipv6Address"`
+	Nameservers    []string `json:"nameservers" yaml:"nameservers"`
+	DefaultGateway string   `json:"defaultGateway" yaml:"defaultGateway"`
 }
 
 type VirtualMachineActionState string

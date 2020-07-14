@@ -254,6 +254,8 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 						ipnet.Mask[2],
 						ipnet.Mask[3],
 					),
+					Nameservers: nic.Nameservers,
+					Gateway:     nic.DefaultGateway,
 				},
 			},
 		})

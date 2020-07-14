@@ -119,6 +119,9 @@ func TestVirtualMachineCreate(t *testing.T) {
 					NetworkID:      net.ID,
 					IPv4Address:    "10.0.0.1",
 					DefaultGateway: "10.0.0.254",
+					Nameservers: []string{
+						"8.8.8.8",
+					},
 				},
 			},
 			LoginUsers: []*system.VirtualMachineLoginUser{
