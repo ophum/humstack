@@ -13,7 +13,7 @@ type NamespaceHandlerInterface interface {
 }
 
 const (
-	basePath = "namespaces"
+	basePath = "groups/:group_id/namespaces"
 )
 
 type NamespaceHandler struct {

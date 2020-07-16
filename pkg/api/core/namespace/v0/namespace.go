@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ophum/humstack/pkg/api/core"
@@ -25,7 +26,8 @@ func NewNamespaceHandler(store store.Store) *NamespaceHandler {
 }
 
 func (h *NamespaceHandler) FindAll(ctx *gin.Context) {
-	list := h.store.List("namespace/")
+	groupID := getGroupID(ctx)
+	list := h.store.List(getKey(groupID, ""))
 	nsList := []core.Namespace{}
 	for _, o := range list {
 		nsList = append(nsList, o.(core.Namespace))
@@ -37,8 +39,9 @@ func (h *NamespaceHandler) FindAll(ctx *gin.Context) {
 }
 
 func (h *NamespaceHandler) Find(ctx *gin.Context) {
-	nsID := ctx.Param("namespace_id")
-	obj := h.store.Get(getKey(nsID))
+	groupID := getGroupID(ctx)
+	nsID := getNSID(ctx)
+	obj := h.store.Get(getKey(groupID, nsID))
 	if obj == nil {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Namespace `%s` is not found.", nsID), nil)
 		return
@@ -66,7 +69,7 @@ func (h *NamespaceHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(request.ID)
+	key := getKey(request.Group, request.ID)
 	obj := h.store.Get(key)
 	if obj != nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: namespace `%s` is already exists.", request.Name), nil)
@@ -84,7 +87,9 @@ func (h *NamespaceHandler) Create(ctx *gin.Context) {
 }
 
 func (h *NamespaceHandler) Update(ctx *gin.Context) {
-	nsID := ctx.Param("namespace_id")
+	groupID := getGroupID(ctx)
+	nsID := getNSID(ctx)
+
 	var request core.Namespace
 
 	err := ctx.Bind(&request)
@@ -98,7 +103,11 @@ func (h *NamespaceHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(request.ID)
+	if request.Group != groupID {
+		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: can't change group"), nil)
+	}
+
+	key := getKey(request.Group, request.ID)
 	obj := h.store.Get(key)
 	if obj == nil {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: namespace `%s` is not found.", request.ID), nil)
@@ -116,15 +125,24 @@ func (h *NamespaceHandler) Update(ctx *gin.Context) {
 }
 
 func (h *NamespaceHandler) Delete(ctx *gin.Context) {
-	nsID := ctx.Param("namespace_id")
+	groupID := getGroupID(ctx)
+	nsID := getNSID(ctx)
 
-	key := getKey(nsID)
+	key := getKey(groupID, nsID)
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
 	h.store.Delete(key)
 }
 
-func getKey(name string) string {
-	return "namespace/" + name
+func getGroupID(ctx *gin.Context) string {
+	return ctx.Param("group_id")
+}
+
+func getNSID(ctx *gin.Context) string {
+	return ctx.Param("namespace_id")
+}
+
+func getKey(groupID, nsID string) string {
+	return filepath.Join("namespace", groupID, nsID)
 }

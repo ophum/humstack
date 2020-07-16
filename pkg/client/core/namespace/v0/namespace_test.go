@@ -8,19 +8,32 @@ import (
 
 	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/meta"
+	grv0 "github.com/ophum/humstack/pkg/client/core/group/v0"
 )
 
 const (
+	groupID     = "test-gr"
 	namespaceID = "test-namespace-00"
 )
 
 func TestNamespaceCreate(t *testing.T) {
+	grClient := grv0.NewGroupClient("http", "localhost", 8080)
+	gr, err := grClient.Create(&core.Group{
+		Meta: meta.Meta{
+			ID:   groupID,
+			Name: "test-group",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	client := NewNamespaceClient("http", "localhost", 8080)
 
 	namespace, err := client.Create(&core.Namespace{
 		Meta: meta.Meta{
-			ID:   namespaceID,
-			Name: "TEST0",
+			ID:    namespaceID,
+			Group: gr.ID,
+			Name:  "TEST0",
 		},
 	})
 	if err != nil {
@@ -35,7 +48,7 @@ func TestNamespaceCreate(t *testing.T) {
 func TestNamespaceList(t *testing.T) {
 	client := NewNamespaceClient("http", "localhost", 8080)
 
-	namespaceList, err := client.List()
+	namespaceList, err := client.List(groupID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +61,7 @@ func TestNamespaceList(t *testing.T) {
 func TestNamespaceGet(t *testing.T) {
 	client := NewNamespaceClient("http", "localhost", 8080)
 
-	namespace, err := client.Get(namespaceID)
+	namespace, err := client.Get(groupID, namespaceID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +92,7 @@ func TestNamespaceUpdate(t *testing.T) {
 func TestNamespaceDelete(t *testing.T) {
 	client := NewNamespaceClient("http", "localhost", 8080)
 
-	err := client.Delete(namespaceID)
+	err := client.Delete(groupID, namespaceID)
 	if err != nil {
 		t.Fatal(err)
 	}
