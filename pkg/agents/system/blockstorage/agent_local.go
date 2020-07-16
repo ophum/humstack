@@ -15,7 +15,7 @@ import (
 )
 
 func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error {
-	dirPath := filepath.Join(a.localBlockStorageDirectory, bs.Namespace)
+	dirPath := filepath.Join(a.localBlockStorageDirectory, bs.Group, bs.Namespace)
 	path := filepath.Join(dirPath, bs.ID)
 	log.Printf("[BS] %s\n", bs.Name)
 	log.Printf("[BS] ==> %s", path)
@@ -35,7 +35,7 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 				return err
 			}
 
-			err = a.client.SystemV0().BlockStorage().Delete(bs.Namespace, bs.ID)
+			err = a.client.SystemV0().BlockStorage().Delete(bs.Group, bs.Namespace, bs.ID)
 			if err != nil {
 				return err
 			}

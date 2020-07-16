@@ -45,82 +45,89 @@ func (a *BlockStorageAgent) Run() {
 	for {
 		select {
 		case <-ticker.C:
-			nsList, err := a.client.CoreV0().Namespace().List()
+			grList, err := a.client.CoreV0().Group().List()
 			if err != nil {
-				log.Printf("[BS] %s", err.Error())
+				log.Println("[BS] %s", err.Error())
 				continue
 			}
-
-			for _, ns := range nsList {
-				bsList, err := a.client.SystemV0().BlockStorage().List(ns.ID)
+			for _, group := range grList {
+				nsList, err := a.client.CoreV0().Namespace().List(group.ID)
 				if err != nil {
-					log.Printf("[BS] %s", err.Error())
+					log.Println("[BS] %s", err.Error())
 					continue
 				}
 
-				vmList, err := a.client.SystemV0().VirtualMachine().List(ns.ID)
-				if err != nil {
-					log.Printf("[BS] %s", err.Error())
-					continue
-				}
-				usedBSIDs := []string{}
-				for _, vm := range vmList {
-					if vm.Status.State == system.VirtualMachineStateRunning {
-						usedBSIDs = append(usedBSIDs, vm.Spec.BlockStorageIDs...)
+				for _, ns := range nsList {
+					bsList, err := a.client.SystemV0().BlockStorage().List(group.ID, ns.ID)
+					if err != nil {
+						log.Printf("[BS] %s", err.Error())
+						continue
 					}
-				}
 
-				for _, bs := range bsList {
-					oldHash := bs.ResourceHash
+					vmList, err := a.client.SystemV0().VirtualMachine().List(group.ID, ns.ID)
+					if err != nil {
+						log.Printf("[BS] %s", err.Error())
+						continue
+					}
+					usedBSIDs := []string{}
+					for _, vm := range vmList {
+						if vm.Status.State == system.VirtualMachineStateRunning {
+							usedBSIDs = append(usedBSIDs, vm.Spec.BlockStorageIDs...)
+						}
+					}
 
-					// state check
-					if bs.Status.State != system.BlockStorageStateDeleting &&
-						bs.Status.State != system.BlockStorageStatePending {
+					for _, bs := range bsList {
+						oldHash := bs.ResourceHash
 
-						oldState := bs.Status.State
-						bs.Status.State = system.BlockStorageStateActive
-						log.Println("====")
-						log.Println(usedBSIDs)
-						for i, usedID := range usedBSIDs {
-							if bs.ID == usedID {
-								bs.Status.State = system.BlockStorageStateUsed
-								usedBSIDs = append(usedBSIDs[:i], usedBSIDs[i+1:]...)
-								break
+						// state check
+						if bs.Status.State != system.BlockStorageStateDeleting &&
+							bs.Status.State != system.BlockStorageStatePending {
+
+							oldState := bs.Status.State
+							bs.Status.State = system.BlockStorageStateActive
+							log.Println("====")
+							log.Println(usedBSIDs)
+							for i, usedID := range usedBSIDs {
+								if bs.ID == usedID {
+									bs.Status.State = system.BlockStorageStateUsed
+									usedBSIDs = append(usedBSIDs[:i], usedBSIDs[i+1:]...)
+									break
+								}
+							}
+							log.Println(usedBSIDs)
+							log.Println("====")
+
+							if bs.Status.State != oldState {
+								bs, err = a.client.SystemV0().BlockStorage().Update(bs)
+								if err != nil {
+									log.Println(err)
+									continue
+								}
 							}
 						}
-						log.Println(usedBSIDs)
-						log.Println("====")
 
-						if bs.Status.State != oldState {
-							bs, err = a.client.SystemV0().BlockStorage().Update(bs)
+						switch bs.Annotations[BlockStorageV0AnnotationType] {
+						case BlockStorageV0BlockStorageTypeLocal:
+							if bs.Annotations[BlockStorageV0AnnotationNodeName] != nodeName {
+								continue
+							}
+
+							err = a.syncLocalBlockStorage(bs)
 							if err != nil {
 								log.Println(err)
 								continue
 							}
 						}
-					}
 
-					switch bs.Annotations[BlockStorageV0AnnotationType] {
-					case BlockStorageV0BlockStorageTypeLocal:
-						if bs.Annotations[BlockStorageV0AnnotationNodeName] != nodeName {
+						if bs.ResourceHash == oldHash {
 							continue
 						}
 
-						err = a.syncLocalBlockStorage(bs)
+						_, err := a.client.SystemV0().BlockStorage().Update(bs)
 						if err != nil {
 							log.Println(err)
 							continue
 						}
-					}
-
-					if bs.ResourceHash == oldHash {
-						continue
-					}
-
-					_, err := a.client.SystemV0().BlockStorage().Update(bs)
-					if err != nil {
-						log.Println(err)
-						continue
 					}
 				}
 			}
