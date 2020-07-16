@@ -18,7 +18,7 @@ type NetworkHandler struct {
 }
 
 const (
-	basePath = "namespaces/:namespace_id/networks"
+	basePath = "groups/:group_id/namespaces/:namespace_id/networks"
 )
 
 func NewNetworkHandler(router *gin.RouterGroup, nhi NetworkHandlerInterface) *NetworkHandler {

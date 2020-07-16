@@ -26,9 +26,9 @@ func NewNetworkHandler(store store.Store) *NetworkHandler {
 }
 
 func (h *NetworkHandler) FindAll(ctx *gin.Context) {
-	nsID := ctx.Param("namespace_id")
+	groupID, nsID, _ := getIDs(ctx)
 
-	list := h.store.List(getKey(nsID, ""))
+	list := h.store.List(getKey(groupID, nsID, ""))
 	nsList := []system.Network{}
 	for _, o := range list {
 		nsList = append(nsList, o.(system.Network))
@@ -40,10 +40,9 @@ func (h *NetworkHandler) FindAll(ctx *gin.Context) {
 }
 
 func (h *NetworkHandler) Find(ctx *gin.Context) {
-	nsID := ctx.Param("namespace_id")
-	netID := ctx.Param("network_id")
+	groupID, nsID, netID := getIDs(ctx)
 
-	obj := h.store.Get(getKey(nsID, netID))
+	obj := h.store.Get(getKey(groupID, nsID, netID))
 	if obj == nil {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Network `%s` is not found.", nsID), nil)
 		return
@@ -56,7 +55,7 @@ func (h *NetworkHandler) Find(ctx *gin.Context) {
 }
 
 func (h *NetworkHandler) Create(ctx *gin.Context) {
-	nsID := ctx.Param("namespace_id")
+	groupID, nsID, _ := getIDs(ctx)
 
 	var request system.Network
 
@@ -71,14 +70,14 @@ func (h *NetworkHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	obj := h.store.Get(filepath.Join("namespace", nsID))
+	obj := h.store.Get(filepath.Join("namespace", groupID, nsID))
 	if obj == nil {
 		log.Println("error")
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: namespace is not found."), nil)
 		return
 	}
 
-	key := getKey(nsID, request.ID)
+	key := getKey(groupID, nsID, request.ID)
 	obj = h.store.Get(key)
 	if obj != nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: Network `%s` is already exists.", request.Name), nil)
@@ -96,8 +95,7 @@ func (h *NetworkHandler) Create(ctx *gin.Context) {
 }
 
 func (h *NetworkHandler) Update(ctx *gin.Context) {
-	nsID := ctx.Param("namespace_id")
-	netID := ctx.Param("network_id")
+	groupID, nsID, netID := getIDs(ctx)
 
 	var request system.Network
 	err := ctx.Bind(&request)
@@ -111,7 +109,7 @@ func (h *NetworkHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(nsID, netID)
+	key := getKey(groupID, nsID, netID)
 	obj := h.store.Get(key)
 	if obj == nil {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: Network `%s` is not found in Namespace `%s`.", netID, nsID), nil)
@@ -129,10 +127,9 @@ func (h *NetworkHandler) Update(ctx *gin.Context) {
 }
 
 func (h *NetworkHandler) Delete(ctx *gin.Context) {
-	nsID := ctx.Param("namespace_id")
-	netID := ctx.Param("network_id")
+	groupID, nsID, netID := getIDs(ctx)
 
-	key := getKey(nsID, netID)
+	key := getKey(groupID, nsID, netID)
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
@@ -142,6 +139,13 @@ func (h *NetworkHandler) Delete(ctx *gin.Context) {
 	})
 }
 
-func getKey(nsID, id string) string {
-	return filepath.Join("network", nsID, id)
+func getIDs(ctx *gin.Context) (groupID, nsID, netID string) {
+	groupID = ctx.Param("group_id")
+	nsID = ctx.Param("namespace_id")
+	netID = ctx.Param("network_id")
+	return groupID, nsID, netID
+}
+
+func getKey(groupID, nsID, id string) string {
+	return filepath.Join("network", groupID, nsID, id)
 }
