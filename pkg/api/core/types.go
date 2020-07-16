@@ -16,3 +16,21 @@ type Namespace struct {
 
 	Spec NamespaceSpec `json:"spec" yaml:"spec"`
 }
+
+type GroupSpec struct {
+}
+
+type Group struct {
+	meta.Meta `json:"meta" yaml:"meta"`
+
+	Spec GroupSpec `json:"spec" yaml:"spec"`
+}
+
+type UserSpec struct {
+	Password string `json:"password" yaml:"password"`
+}
+type User struct {
+	meta.Meta `json:"meta" yaml:"meta"`
+
+	Spec UserSpec `json:"spec" yaml:"spec"`
+}

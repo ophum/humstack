@@ -9,20 +9,34 @@ import (
 	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
+	grv0 "github.com/ophum/humstack/pkg/client/core/group/v0"
 	nsv0 "github.com/ophum/humstack/pkg/client/core/namespace/v0"
 )
 
 const (
+	groupID     = "test-group-00"
 	namespaceID = "test-namespace-00"
 	networkID   = "test-network-00"
 )
 
 func TestNetworkCreate(t *testing.T) {
-	nsClient := nsv0.NewNamespaceClient("http", "localhost", 8080)
-	_, err := nsClient.Create(&core.Namespace{
+	grClient := grv0.NewGroupClient("http", "localhost", 8080)
+	_, err := grClient.Create(&core.Group{
 		Meta: meta.Meta{
-			ID:   namespaceID,
-			Name: "test-ns",
+			ID:   groupID,
+			Name: "test-gr",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nsClient := nsv0.NewNamespaceClient("http", "localhost", 8080)
+	_, err = nsClient.Create(&core.Namespace{
+		Meta: meta.Meta{
+			ID:    namespaceID,
+			Name:  "test-ns",
+			Group: groupID,
 		},
 	})
 	if err != nil {
@@ -36,6 +50,7 @@ func TestNetworkCreate(t *testing.T) {
 			ID:        networkID,
 			Name:      "test-network",
 			Namespace: namespaceID,
+			Group:     groupID,
 			Annotations: map[string]string{
 				"networkv0/network_type":    "Bridge",
 				"networkv0/default_gateway": "10.0.0.1/24",
@@ -58,7 +73,7 @@ func TestNetworkCreate(t *testing.T) {
 func TestNetworkList(t *testing.T) {
 	client := NewNetworkClient("http", "localhost", 8080)
 
-	netList, err := client.List(namespaceID)
+	netList, err := client.List(groupID, namespaceID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +86,7 @@ func TestNetworkList(t *testing.T) {
 func TestNetworkGet(t *testing.T) {
 	client := NewNetworkClient("http", "localhost", 8080)
 
-	net, err := client.Get(namespaceID, networkID)
+	net, err := client.Get(groupID, namespaceID, networkID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,6 +104,7 @@ func TestNetworkUpdate(t *testing.T) {
 			ID:        networkID,
 			Name:      "test-network-changed1",
 			Namespace: namespaceID,
+			Group:     groupID,
 		},
 	})
 	if err != nil {
@@ -103,7 +119,7 @@ func TestNetworkUpdate(t *testing.T) {
 func TestNetworkDelete(t *testing.T) {
 	client := NewNetworkClient("http", "localhost", 8080)
 
-	err := client.Delete(namespaceID, networkID)
+	err := client.Delete(groupID, namespaceID, networkID)
 	if err != nil {
 		t.Fatal(err)
 	}

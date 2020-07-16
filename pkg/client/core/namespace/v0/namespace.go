@@ -35,7 +35,7 @@ type NamespaceListResponse struct {
 }
 
 const (
-	basePath = "api/v0/namespaces"
+	basePathFormat = "api/v0/groups/%s/namespaces"
 )
 
 func NewNamespaceClient(scheme, apiServerAddress string, apiServerPort int32) *NamespaceClient {
@@ -51,8 +51,8 @@ func NewNamespaceClient(scheme, apiServerAddress string, apiServerPort int32) *N
 	}
 }
 
-func (c *NamespaceClient) Get(namespaceID string) (*core.Namespace, error) {
-	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(namespaceID))
+func (c *NamespaceClient) Get(groupID, namespaceID string) (*core.Namespace, error) {
+	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(groupID, namespaceID))
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +67,8 @@ func (c *NamespaceClient) Get(namespaceID string) (*core.Namespace, error) {
 	return &namespaceResp.Data.Namespace, nil
 }
 
-func (c *NamespaceClient) List() ([]*core.Namespace, error) {
-	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(""))
+func (c *NamespaceClient) List(groupID string) ([]*core.Namespace, error) {
+	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(groupID, ""))
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (c *NamespaceClient) Create(namespace *core.Namespace) (*core.Namespace, er
 	}
 	log.Println(string(body))
 
-	resp, err := c.client.R().SetHeaders(c.headers).SetBody(body).Post(c.getPath(""))
+	resp, err := c.client.R().SetHeaders(c.headers).SetBody(body).Post(c.getPath(namespace.Group, ""))
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (c *NamespaceClient) Update(namespace *core.Namespace) (*core.Namespace, er
 	}
 
 	fmt.Println(string(body))
-	resp, err := c.client.R().SetHeaders(c.headers).SetBody(body).Put(c.getPath(namespace.ID))
+	resp, err := c.client.R().SetHeaders(c.headers).SetBody(body).Put(c.getPath(namespace.Group, namespace.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -130,8 +130,8 @@ func (c *NamespaceClient) Update(namespace *core.Namespace) (*core.Namespace, er
 	return &namespaceResp.Data.Namespace, nil
 }
 
-func (c *NamespaceClient) Delete(namespaceID string) error {
-	_, err := c.client.R().SetHeaders(c.headers).Delete(c.getPath(namespaceID))
+func (c *NamespaceClient) Delete(groupID, namespaceID string) error {
+	_, err := c.client.R().SetHeaders(c.headers).Delete(c.getPath(groupID, namespaceID))
 	if err != nil {
 		return err
 	}
@@ -139,6 +139,14 @@ func (c *NamespaceClient) Delete(namespaceID string) error {
 	return nil
 }
 
-func (c *NamespaceClient) getPath(path string) string {
-	return fmt.Sprintf("%s://%s", c.scheme, filepath.Join(fmt.Sprintf("%s:%d", c.apiServerAddress, c.apiServerPort), basePath, path))
+func (c *NamespaceClient) getPath(groupID, path string) string {
+	return fmt.Sprintf("%s://%s",
+		c.scheme,
+		filepath.Join(
+			fmt.Sprintf("%s:%d",
+				c.apiServerAddress,
+				c.apiServerPort,
+			),
+			fmt.Sprintf(basePathFormat, groupID),
+			path))
 }

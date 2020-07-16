@@ -35,7 +35,7 @@ type NetworkListResponse struct {
 }
 
 const (
-	basePathFormat = "api/v0/namespaces/%s/networks"
+	basePathFormat = "api/v0/groups/%s/namespaces/%s/networks"
 )
 
 func NewNetworkClient(scheme, apiServerAddress string, apiServerPort int32) *NetworkClient {
@@ -51,8 +51,8 @@ func NewNetworkClient(scheme, apiServerAddress string, apiServerPort int32) *Net
 	}
 }
 
-func (c *NetworkClient) Get(namespaceID, networkID string) (*system.Network, error) {
-	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(namespaceID, networkID))
+func (c *NetworkClient) Get(groupID, namespaceID, networkID string) (*system.Network, error) {
+	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(groupID, namespaceID, networkID))
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +67,8 @@ func (c *NetworkClient) Get(namespaceID, networkID string) (*system.Network, err
 	return &nodeResp.Data.Network, nil
 }
 
-func (c *NetworkClient) List(namespaceID string) ([]*system.Network, error) {
-	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(namespaceID, ""))
+func (c *NetworkClient) List(groupID, namespaceID string) ([]*system.Network, error) {
+	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(groupID, namespaceID, ""))
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (c *NetworkClient) Create(network *system.Network) (*system.Network, error)
 	}
 	log.Println(string(body))
 
-	resp, err := c.client.R().SetHeaders(c.headers).SetBody(body).Post(c.getPath(network.Namespace, ""))
+	resp, err := c.client.R().SetHeaders(c.headers).SetBody(body).Post(c.getPath(network.Group, network.Namespace, ""))
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (c *NetworkClient) Update(network *system.Network) (*system.Network, error)
 	}
 
 	fmt.Println(string(body))
-	resp, err := c.client.R().SetHeaders(c.headers).SetBody(body).Put(c.getPath(network.Namespace, network.ID))
+	resp, err := c.client.R().SetHeaders(c.headers).SetBody(body).Put(c.getPath(network.Group, network.Namespace, network.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -130,8 +130,8 @@ func (c *NetworkClient) Update(network *system.Network) (*system.Network, error)
 	return &nodeResp.Data.Network, nil
 }
 
-func (c *NetworkClient) Delete(namespaceID, networkID string) error {
-	_, err := c.client.R().SetHeaders(c.headers).Delete(c.getPath(namespaceID, networkID))
+func (c *NetworkClient) Delete(groupID, namespaceID, networkID string) error {
+	_, err := c.client.R().SetHeaders(c.headers).Delete(c.getPath(groupID, namespaceID, networkID))
 	if err != nil {
 		return err
 	}
@@ -139,12 +139,12 @@ func (c *NetworkClient) Delete(namespaceID, networkID string) error {
 	return nil
 }
 
-func (c *NetworkClient) getPath(namespaceID, networkID string) string {
+func (c *NetworkClient) getPath(groupID, namespaceID, networkID string) string {
 	return fmt.Sprintf("%s://%s",
 		c.scheme,
 		filepath.Join(
 			fmt.Sprintf("%s:%d",
 				c.apiServerAddress, c.apiServerPort),
-			fmt.Sprintf(basePathFormat, namespaceID),
+			fmt.Sprintf(basePathFormat, groupID, namespaceID),
 			networkID))
 }

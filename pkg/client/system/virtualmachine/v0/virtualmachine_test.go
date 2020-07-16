@@ -8,6 +8,7 @@ import (
 	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
+	grv0 "github.com/ophum/humstack/pkg/client/core/group/v0"
 	nsv0 "github.com/ophum/humstack/pkg/client/core/namespace/v0"
 	bsv0 "github.com/ophum/humstack/pkg/client/system/blockstorage/v0"
 	netv0 "github.com/ophum/humstack/pkg/client/system/network/v0"
@@ -19,11 +20,19 @@ const (
 )
 
 func TestVirtualMachineCreate(t *testing.T) {
+	grClient := grv0.NewGroupClient("http", "localhost", 8080)
+	gr, err := grClient.Create(&core.Group{
+		Meta: meta.Meta{
+			ID:   "test-gr",
+			Name: "test-gr",
+		},
+	})
 	nsClient := nsv0.NewNamespaceClient("http", "localhost", 8080)
 	ns, err := nsClient.Create(&core.Namespace{
 		Meta: meta.Meta{
-			ID:   "test-ns",
-			Name: "test-ns",
+			ID:    "test-ns",
+			Name:  "test-ns",
+			Group: gr.ID,
 		},
 	})
 	if err != nil {
@@ -35,6 +44,7 @@ func TestVirtualMachineCreate(t *testing.T) {
 			ID:        "test-bs",
 			Name:      "test-bs",
 			Namespace: ns.ID,
+			Group:     gr.ID,
 			Annotations: map[string]string{
 				"blockstoragev0/type":      "Local",
 				"blockstoragev0/node_name": nodeName,
@@ -59,6 +69,7 @@ func TestVirtualMachineCreate(t *testing.T) {
 			ID:        "test-bs2",
 			Name:      "test-bs2",
 			Namespace: ns.ID,
+			Group:     gr.ID,
 			Annotations: map[string]string{
 				"blockstoragev0/type":      "Local",
 				"blockstoragev0/node_name": nodeName,
@@ -82,6 +93,7 @@ func TestVirtualMachineCreate(t *testing.T) {
 			ID:        "test-net",
 			Name:      "test-net",
 			Namespace: ns.ID,
+			Group:     gr.ID,
 			Annotations: map[string]string{
 				"networkv0/network_type":    "Bridge",
 				"networkv0/default_gateway": "10.0.0.254/24",
@@ -101,6 +113,7 @@ func TestVirtualMachineCreate(t *testing.T) {
 			ID:        "test-vm",
 			Name:      "test-vm",
 			Namespace: ns.ID,
+			Group:     gr.ID,
 			Annotations: map[string]string{
 				"virtualmachinev0/node_name": nodeName,
 			},
@@ -146,7 +159,7 @@ func TestVirtualMachineCreate(t *testing.T) {
 func TestVirtualMachinePowerOff(t *testing.T) {
 	client := NewVirtualMachineClient("http", "localhost", 8080)
 
-	vm, err := client.Get("test-ns", "test-vm")
+	vm, err := client.Get("test-gr", "test-ns", "test-vm")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +177,7 @@ func TestVirtualMachinePowerOff(t *testing.T) {
 func TestVirtualMachinePowerOn(t *testing.T) {
 	client := NewVirtualMachineClient("http", "localhost", 8080)
 
-	vm, err := client.Get("test-ns", "test-vm")
+	vm, err := client.Get("test-gr", "test-ns", "test-vm")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +195,7 @@ func TestVirtualMachinePowerOn(t *testing.T) {
 func TestVirtualMachineDeleteState(t *testing.T) {
 	client := NewVirtualMachineClient("http", "localhost", 8080)
 
-	err := client.DeleteState("test-ns", "test-vm")
+	err := client.DeleteState("test-gr", "test-ns", "test-vm")
 	if err != nil {
 		t.Fatal(err)
 	}

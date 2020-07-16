@@ -38,40 +38,48 @@ func (a *NetworkAgent) Run() {
 	for {
 		select {
 		case <-ticker.C:
-			nsList, err := a.client.CoreV0().Namespace().List()
+			grList, err := a.client.CoreV0().Group().List()
 			if err != nil {
+				log.Printf("[NET] %s", err.Error())
 				continue
 			}
 
-			for _, ns := range nsList {
-				netList, err := a.client.SystemV0().Network().List(ns.ID)
+			for _, group := range grList {
+				nsList, err := a.client.CoreV0().Namespace().List(group.ID)
 				if err != nil {
 					continue
 				}
 
-				for _, net := range netList {
-					oldHash := net.ResourceHash
-					switch net.Annotations[NetworkV0AnnotationNetworkType] {
-					case NetworkV0NetworkTypeBridge:
-						err = syncBridgeNetwork(net)
+				for _, ns := range nsList {
+					netList, err := a.client.SystemV0().Network().List(group.ID, ns.ID)
+					if err != nil {
+						continue
+					}
+
+					for _, net := range netList {
+						oldHash := net.ResourceHash
+						switch net.Annotations[NetworkV0AnnotationNetworkType] {
+						case NetworkV0NetworkTypeBridge:
+							err = syncBridgeNetwork(net)
+							if err != nil {
+								log.Println("error sync bridge network")
+								log.Println(err)
+								continue
+							}
+
+						}
+
+						if net.ResourceHash == oldHash {
+							log.Println("no update")
+							continue
+						}
+						log.Println("update store")
+						_, err = a.client.SystemV0().Network().Update(net)
 						if err != nil {
-							log.Println("error sync bridge network")
+							log.Println("error Update store")
 							log.Println(err)
 							continue
 						}
-
-					}
-
-					if net.ResourceHash == oldHash {
-						log.Println("no update")
-						continue
-					}
-					log.Println("update store")
-					_, err = a.client.SystemV0().Network().Update(net)
-					if err != nil {
-						log.Println("error Update store")
-						log.Println(err)
-						continue
 					}
 				}
 			}

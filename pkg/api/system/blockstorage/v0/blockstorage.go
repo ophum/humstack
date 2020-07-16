@@ -25,9 +25,9 @@ func NewBlockStorageHandler(store store.Store) *BlockStorageHandler {
 }
 
 func (h *BlockStorageHandler) FindAll(ctx *gin.Context) {
-	nsID := getNSID(ctx)
+	groupID, nsID, _ := getIDs(ctx)
 
-	list := h.store.List(getKey(nsID, ""))
+	list := h.store.List(getKey(groupID, nsID, ""))
 	bsList := []system.BlockStorage{}
 	for _, o := range list {
 		bsList = append(bsList, o.(system.BlockStorage))
@@ -40,10 +40,9 @@ func (h *BlockStorageHandler) FindAll(ctx *gin.Context) {
 }
 
 func (h *BlockStorageHandler) Find(ctx *gin.Context) {
-	nsID := getNSID(ctx)
-	bsID := getBSID(ctx)
+	groupID, nsID, bsID := getIDs(ctx)
 
-	obj := h.store.Get(getKey(nsID, bsID))
+	obj := h.store.Get(getKey(groupID, nsID, bsID))
 	if obj == nil {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("BlockStorage `%s` is not found.", bsID), nil)
 		return
@@ -56,9 +55,9 @@ func (h *BlockStorageHandler) Find(ctx *gin.Context) {
 }
 
 func (h *BlockStorageHandler) Create(ctx *gin.Context) {
-	nsID := getNSID(ctx)
+	groupID, nsID, _ := getIDs(ctx)
 
-	obj := h.store.Get(filepath.Join("namespace", nsID))
+	obj := h.store.Get(filepath.Join("namespace", groupID, nsID))
 	if obj == nil {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: namespace is not found."), nil)
 		return
@@ -84,7 +83,7 @@ func (h *BlockStorageHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(nsID, request.ID)
+	key := getKey(groupID, nsID, request.ID)
 	obj = h.store.Get(key)
 	if obj != nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: BlockStorage `%s` is already exists.", request.Name), nil)
@@ -102,8 +101,7 @@ func (h *BlockStorageHandler) Create(ctx *gin.Context) {
 }
 
 func (h *BlockStorageHandler) Update(ctx *gin.Context) {
-	nsID := getNSID(ctx)
-	bsID := getBSID(ctx)
+	groupID, nsID, bsID := getIDs(ctx)
 
 	var request system.BlockStorage
 	err := ctx.Bind(&request)
@@ -129,7 +127,7 @@ func (h *BlockStorageHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(nsID, request.ID)
+	key := getKey(groupID, nsID, request.ID)
 
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
@@ -142,10 +140,9 @@ func (h *BlockStorageHandler) Update(ctx *gin.Context) {
 }
 
 func (h *BlockStorageHandler) Delete(ctx *gin.Context) {
-	nsID := getNSID(ctx)
-	bsID := getBSID(ctx)
+	groupID, nsID, bsID := getIDs(ctx)
 
-	key := getKey(nsID, bsID)
+	key := getKey(groupID, nsID, bsID)
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
@@ -156,14 +153,13 @@ func (h *BlockStorageHandler) Delete(ctx *gin.Context) {
 	})
 }
 
-func getNSID(ctx *gin.Context) string {
-	return ctx.Param("namespace_id")
+func getIDs(ctx *gin.Context) (groupID, nsID, bsID string) {
+	groupID = ctx.Param("group_id")
+	nsID = ctx.Param("namespace_id")
+	bsID = ctx.Param("block_storage_id")
+	return groupID, nsID, bsID
 }
 
-func getBSID(ctx *gin.Context) string {
-	return ctx.Param("block_storage_id")
-}
-
-func getKey(nsID, name string) string {
-	return filepath.Join("blockstorage", nsID, name)
+func getKey(groupID, nsID, id string) string {
+	return filepath.Join("blockstorage", groupID, nsID, id)
 }

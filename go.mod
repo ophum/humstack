@@ -6,6 +6,7 @@ require (
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-resty/resty/v2 v2.3.0
 	github.com/google/uuid v1.1.1
+	github.com/jinzhu/gorm v1.9.4
 	github.com/n0stack/n0stack v0.2.134
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/spf13/cobra v1.0.0

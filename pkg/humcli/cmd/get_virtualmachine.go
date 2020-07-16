@@ -20,7 +20,7 @@ var getVirtualMachineCmd = &cobra.Command{
 	Use: "virtualmachine",
 	Run: func(cmd *cobra.Command, args []string) {
 		clients := client.NewClients("localhost", 8080)
-		vmList, err := clients.SystemV0().VirtualMachine().List(namespace)
+		vmList, err := clients.SystemV0().VirtualMachine().List(group, namespace)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -35,7 +35,7 @@ type VirtualMachineListResponse struct {
 }
 
 const (
-	basePathFormat = "api/v0/namespaces/%s/virtualmachines"
+	basePathFormat = "api/v0/groups/%s/namespaces/%s/virtualmachines"
 )
 
 func NewVirtualMachineClient(scheme, apiServerAddress string, apiServerPort int32) *VirtualMachineClient {
@@ -51,8 +51,8 @@ func NewVirtualMachineClient(scheme, apiServerAddress string, apiServerPort int3
 	}
 }
 
-func (c *VirtualMachineClient) Get(namespaceID, virtualMachineID string) (*system.VirtualMachine, error) {
-	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(namespaceID, virtualMachineID))
+func (c *VirtualMachineClient) Get(groupID, namespaceID, virtualMachineID string) (*system.VirtualMachine, error) {
+	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(groupID, namespaceID, virtualMachineID))
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +67,8 @@ func (c *VirtualMachineClient) Get(namespaceID, virtualMachineID string) (*syste
 	return &vmRes.Data.VirtualMachine, nil
 }
 
-func (c *VirtualMachineClient) List(namespaceID string) ([]*system.VirtualMachine, error) {
-	res, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(namespaceID, ""))
+func (c *VirtualMachineClient) List(groupID, namespaceID string) ([]*system.VirtualMachine, error) {
+	res, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(groupID, namespaceID, ""))
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (c *VirtualMachineClient) Create(vm *system.VirtualMachine) (*system.Virtua
 		return nil, err
 	}
 
-	res, err := c.client.R().SetHeaders(c.headers).SetBody(body).Post(c.getPath(vm.Namespace, ""))
+	res, err := c.client.R().SetHeaders(c.headers).SetBody(body).Post(c.getPath(vm.Group, vm.Namespace, ""))
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (c *VirtualMachineClient) Update(vm *system.VirtualMachine) (*system.Virtua
 		return nil, err
 	}
 
-	res, err := c.client.R().SetHeaders(c.headers).SetBody(body).Put(c.getPath(vm.Namespace, vm.ID))
+	res, err := c.client.R().SetHeaders(c.headers).SetBody(body).Put(c.getPath(vm.Group, vm.Namespace, vm.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -129,8 +129,8 @@ func (c *VirtualMachineClient) Update(vm *system.VirtualMachine) (*system.Virtua
 	return &vmRes.Data.VirtualMachine, nil
 }
 
-func (c *VirtualMachineClient) Delete(namespaceID, virtualMachineID string) error {
-	_, err := c.client.R().SetHeaders(c.headers).Delete(c.getPath(namespaceID, virtualMachineID))
+func (c *VirtualMachineClient) Delete(groupID, namespaceID, virtualMachineID string) error {
+	_, err := c.client.R().SetHeaders(c.headers).Delete(c.getPath(groupID, namespaceID, virtualMachineID))
 	if err != nil {
 		return err
 	}
@@ -138,8 +138,8 @@ func (c *VirtualMachineClient) Delete(namespaceID, virtualMachineID string) erro
 
 }
 
-func (c *VirtualMachineClient) DeleteState(namespaceID, virtualMachineID string) error {
-	vm, err := c.Get(namespaceID, virtualMachineID)
+func (c *VirtualMachineClient) DeleteState(groupID, namespaceID, virtualMachineID string) error {
+	vm, err := c.Get(groupID, namespaceID, virtualMachineID)
 	if err != nil {
 		return err
 	}
@@ -150,12 +150,12 @@ func (c *VirtualMachineClient) DeleteState(namespaceID, virtualMachineID string)
 	return err
 }
 
-func (c *VirtualMachineClient) getPath(namespaceID, virtualMachineID string) string {
+func (c *VirtualMachineClient) getPath(groupID, namespaceID, virtualMachineID string) string {
 	return fmt.Sprintf("%s://%s",
 		c.scheme,
 		filepath.Join(
 			fmt.Sprintf("%s:%d", c.apiServerAddress, c.apiServerPort),
-			fmt.Sprintf(basePathFormat, namespaceID),
+			fmt.Sprintf(basePathFormat, groupID, namespaceID),
 			virtualMachineID,
 		))
 }

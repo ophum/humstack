@@ -4,6 +4,8 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ophum/humstack/pkg/api/core/group"
+	grv0 "github.com/ophum/humstack/pkg/api/core/group/v0"
 	"github.com/ophum/humstack/pkg/api/core/namespace"
 	nsv0 "github.com/ophum/humstack/pkg/api/core/namespace/v0"
 	"github.com/ophum/humstack/pkg/api/system/blockstorage"
@@ -21,6 +23,7 @@ func main() {
 	r := gin.Default()
 
 	s := store.NewMemoryStore()
+	grh := grv0.NewGroupHandler(s)
 	nsh := nsv0.NewNamespaceHandler(s)
 	nwh := netv0.NewNetworkHandler(s)
 	bsh := bsv0.NewBlockStorageHandler(s)
@@ -29,11 +32,13 @@ func main() {
 
 	v0 := r.Group("/api/v0")
 	{
+		gri := group.NewGroupHandler(v0, grh)
 		nsi := namespace.NewNamespaceHandler(v0, nsh)
 		nwi := network.NewNetworkHandler(v0, nwh)
 		bsi := blockstorage.NewBlockStorageHandler(v0, bsh)
 		vmi := virtualmachine.NewVirtualMachineHandler(v0, vmh)
 		nodei := node.NewNodeHandler(v0, nodeh)
+		gri.RegisterHandlers()
 		nsi.RegisterHandlers()
 		nwi.RegisterHandlers()
 		bsi.RegisterHandlers()

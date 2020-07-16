@@ -35,7 +35,7 @@ type BlockStorageListResponse struct {
 }
 
 const (
-	basePathFormat = "api/v0/namespaces/%s/blockstorages"
+	basePathFormat = "api/v0/groups/%s/namespaces/%s/blockstorages"
 )
 
 func NewBlockStorageClient(scheme, apiServerAddress string, apiServerPort int32) *BlockStorageClient {
@@ -51,8 +51,8 @@ func NewBlockStorageClient(scheme, apiServerAddress string, apiServerPort int32)
 	}
 }
 
-func (c *BlockStorageClient) Get(namespaceID, blockStorageID string) (*system.BlockStorage, error) {
-	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(namespaceID, blockStorageID))
+func (c *BlockStorageClient) Get(groupID, namespaceID, blockStorageID string) (*system.BlockStorage, error) {
+	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(groupID, namespaceID, blockStorageID))
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +67,8 @@ func (c *BlockStorageClient) Get(namespaceID, blockStorageID string) (*system.Bl
 	return &bsRes.Data.BlockStorage, nil
 }
 
-func (c *BlockStorageClient) List(namespaceID string) ([]*system.BlockStorage, error) {
-	res, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(namespaceID, ""))
+func (c *BlockStorageClient) List(groupID, namespaceID string) ([]*system.BlockStorage, error) {
+	res, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(groupID, namespaceID, ""))
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (c *BlockStorageClient) Create(blockstorage *system.BlockStorage) (*system.
 		return nil, err
 	}
 
-	res, err := c.client.R().SetHeaders(c.headers).SetBody(body).Post(c.getPath(blockstorage.Namespace, ""))
+	res, err := c.client.R().SetHeaders(c.headers).SetBody(body).Post(c.getPath(blockstorage.Group, blockstorage.Namespace, ""))
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (c *BlockStorageClient) Update(blockstorage *system.BlockStorage) (*system.
 		return nil, err
 	}
 
-	res, err := c.client.R().SetHeaders(c.headers).SetBody(body).Put(c.getPath(blockstorage.Namespace, blockstorage.ID))
+	res, err := c.client.R().SetHeaders(c.headers).SetBody(body).Put(c.getPath(blockstorage.Group, blockstorage.Namespace, blockstorage.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -129,8 +129,8 @@ func (c *BlockStorageClient) Update(blockstorage *system.BlockStorage) (*system.
 	return &bsRes.Data.BlockStorage, nil
 }
 
-func (c *BlockStorageClient) Delete(namespaceID, blockStorageID string) error {
-	_, err := c.client.R().SetHeaders(c.headers).Delete(c.getPath(namespaceID, blockStorageID))
+func (c *BlockStorageClient) Delete(groupID, namespaceID, blockStorageID string) error {
+	_, err := c.client.R().SetHeaders(c.headers).Delete(c.getPath(groupID, namespaceID, blockStorageID))
 	if err != nil {
 		return err
 	}
@@ -138,8 +138,8 @@ func (c *BlockStorageClient) Delete(namespaceID, blockStorageID string) error {
 
 }
 
-func (c *BlockStorageClient) DeleteState(namespaceID, blockStorageID string) error {
-	bs, err := c.Get(namespaceID, blockStorageID)
+func (c *BlockStorageClient) DeleteState(groupID, namespaceID, blockStorageID string) error {
+	bs, err := c.Get(groupID, namespaceID, blockStorageID)
 	if err != nil {
 		return err
 	}
@@ -150,12 +150,12 @@ func (c *BlockStorageClient) DeleteState(namespaceID, blockStorageID string) err
 	return err
 }
 
-func (c *BlockStorageClient) getPath(namespaceID, blockStorageID string) string {
+func (c *BlockStorageClient) getPath(groupID, namespaceID, blockStorageID string) string {
 	return fmt.Sprintf("%s://%s",
 		c.scheme,
 		filepath.Join(
 			fmt.Sprintf("%s:%d", c.apiServerAddress, c.apiServerPort),
-			fmt.Sprintf(basePathFormat, namespaceID),
+			fmt.Sprintf(basePathFormat, groupID, namespaceID),
 			blockStorageID,
 		))
 }
