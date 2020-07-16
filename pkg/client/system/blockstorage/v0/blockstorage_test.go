@@ -8,11 +8,14 @@ import (
 	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
+	grv0 "github.com/ophum/humstack/pkg/client/core/group/v0"
 	nsv0 "github.com/ophum/humstack/pkg/client/core/namespace/v0"
 )
 
 const (
 	imageURL               = "http://192.168.20.2:8082/bionic-server-cloudimg-amd64.img"
+	groupID                = "test-group-01"
+	groupFromHTTPID        = "test-group-02"
 	namespaceID            = "test-namespace-01"
 	namespaceFromHTTPID    = "test-namespace-02"
 	blockStorageID         = "test-blockstorage-00"
@@ -21,11 +24,23 @@ const (
 
 func TestBlockStorageCreateEmpty(t *testing.T) {
 
+	grClient := grv0.NewGroupClient("http", "localhost", 8080)
+	gr, err := grClient.Create(&core.Group{
+		Meta: meta.Meta{
+			ID:   groupID,
+			Name: "test-group",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	nsClient := nsv0.NewNamespaceClient("http", "localhost", 8080)
 	ns, err := nsClient.Create(&core.Namespace{
 		Meta: meta.Meta{
-			ID:   namespaceID,
-			Name: "test-ns",
+			ID:    namespaceID,
+			Group: gr.ID,
+			Name:  "test-ns",
 		},
 	})
 	if err != nil {
@@ -38,6 +53,7 @@ func TestBlockStorageCreateEmpty(t *testing.T) {
 			ID:        blockStorageID,
 			Name:      "test-bs",
 			Namespace: ns.ID,
+			Group:     gr.ID,
 			Annotations: map[string]string{
 				"blockstoragev0/type":      "Local",
 				"blockstoragev0/node_name": "X1Carbon",
@@ -61,11 +77,19 @@ func TestBlockStorageCreateEmpty(t *testing.T) {
 
 func TestBlockStorageCreateHTTP(t *testing.T) {
 
-	nsClient := nsv0.NewNamespaceClient("http", "localhost", 8080)
-	_, err := nsClient.Create(&core.Namespace{
+	grClient := grv0.NewGroupClient("http", "localhost", 8080)
+	gr, err := grClient.Create(&core.Group{
 		Meta: meta.Meta{
-			ID:   namespaceFromHTTPID,
-			Name: "test-ns2",
+			ID:   groupFromHTTPID,
+			Name: "test-group-from-http",
+		},
+	})
+	nsClient := nsv0.NewNamespaceClient("http", "localhost", 8080)
+	_, err = nsClient.Create(&core.Namespace{
+		Meta: meta.Meta{
+			ID:    namespaceFromHTTPID,
+			Name:  "test-ns2",
+			Group: gr.ID,
 		},
 	})
 	if err != nil {
@@ -78,6 +102,7 @@ func TestBlockStorageCreateHTTP(t *testing.T) {
 			ID:        blockStorageFromHTTPID,
 			Name:      "test-bs-from-http",
 			Namespace: namespaceFromHTTPID,
+			Group:     gr.ID,
 			Annotations: map[string]string{
 				"blockstoragev0/type":      "Local",
 				"blockstoragev0/node_name": "developvbox",
@@ -104,7 +129,7 @@ func TestBlockStorageCreateHTTP(t *testing.T) {
 func TestBlockStorageList(t *testing.T) {
 	client := NewBlockStorageClient("http", "localhost", 8080)
 
-	bsList, err := client.List(namespaceID)
+	bsList, err := client.List(groupID, namespaceID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +141,7 @@ func TestBlockStorageList(t *testing.T) {
 func TestBlockStorageGet(t *testing.T) {
 	client := NewBlockStorageClient("http", "localhost", 8080)
 
-	bsList, err := client.Get(namespaceFromHTTPID, blockStorageFromHTTPID)
+	bsList, err := client.Get(groupFromHTTPID, namespaceFromHTTPID, blockStorageFromHTTPID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +153,7 @@ func TestBlockStorageGet(t *testing.T) {
 func TestBlockStorageDeleteState(t *testing.T) {
 	client := NewBlockStorageClient("http", "localhost", 8080)
 
-	err := client.DeleteState(namespaceID, blockStorageID)
+	err := client.DeleteState(groupID, namespaceID, blockStorageID)
 	if err != nil {
 		t.Fatal(err)
 	}

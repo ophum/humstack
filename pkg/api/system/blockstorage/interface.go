@@ -16,7 +16,7 @@ type BlockStorageHandler struct {
 }
 
 const (
-	basePath = "namespaces/:namespace_id/blockstorages"
+	basePath = "groups/:group_id/namespaces/:namespace_id/blockstorages"
 )
 
 func NewBlockStorageHandler(router *gin.RouterGroup, bshi BlockStorageHandlerInterface) *BlockStorageHandler {
