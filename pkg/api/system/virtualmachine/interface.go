@@ -13,7 +13,7 @@ type VirtualMachineHandlerInterface interface {
 }
 
 const (
-	basePath = "namespaces/:namespace_id/virtualmachines"
+	basePath = "groups/:group_id/namespaces/:namespace_id/virtualmachines"
 )
 
 type VirtualMachineHandler struct {

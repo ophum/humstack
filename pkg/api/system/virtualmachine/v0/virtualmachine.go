@@ -25,9 +25,9 @@ func NewVirtualMachineHandler(store store.Store) *VirtualMachineHandler {
 }
 
 func (h *VirtualMachineHandler) FindAll(ctx *gin.Context) {
-	nsID := getNSID(ctx)
+	groupID, nsID, _ := getIDs(ctx)
 
-	list := h.store.List(getKey(nsID, ""))
+	list := h.store.List(getKey(groupID, nsID, ""))
 	vmList := []system.VirtualMachine{}
 	for _, o := range list {
 		vmList = append(vmList, o.(system.VirtualMachine))
@@ -40,10 +40,9 @@ func (h *VirtualMachineHandler) FindAll(ctx *gin.Context) {
 }
 
 func (h *VirtualMachineHandler) Find(ctx *gin.Context) {
-	nsID := getNSID(ctx)
-	vmID := getVMID(ctx)
+	groupID, nsID, vmID := getIDs(ctx)
 
-	obj := h.store.Get(getKey(nsID, vmID))
+	obj := h.store.Get(getKey(groupID, nsID, vmID))
 	if obj == nil {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("VirtualMachine `%s` is not found.", vmID), nil)
 		return
@@ -56,7 +55,7 @@ func (h *VirtualMachineHandler) Find(ctx *gin.Context) {
 }
 
 func (h *VirtualMachineHandler) Create(ctx *gin.Context) {
-	nsID := getNSID(ctx)
+	groupID, nsID, _ := getIDs(ctx)
 
 	var request system.VirtualMachine
 	err := ctx.Bind(&request)
@@ -70,7 +69,7 @@ func (h *VirtualMachineHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(nsID, request.ID)
+	key := getKey(groupID, nsID, request.ID)
 	obj := h.store.Get(key)
 	if obj != nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: VirtualMachine `%s` is already exists.", request.Name), nil)
@@ -88,8 +87,7 @@ func (h *VirtualMachineHandler) Create(ctx *gin.Context) {
 }
 
 func (h *VirtualMachineHandler) Update(ctx *gin.Context) {
-	nsID := getNSID(ctx)
-	vmID := getVMID(ctx)
+	groupID, nsID, vmID := getIDs(ctx)
 
 	var request system.VirtualMachine
 	err := ctx.Bind(&request)
@@ -103,7 +101,7 @@ func (h *VirtualMachineHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	key := getKey(nsID, request.ID)
+	key := getKey(groupID, nsID, request.ID)
 	obj := h.store.Get(key)
 	if obj == nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: VirtualMachine `%s` is not found.", request.Name), nil)
@@ -121,10 +119,9 @@ func (h *VirtualMachineHandler) Update(ctx *gin.Context) {
 }
 
 func (h *VirtualMachineHandler) Delete(ctx *gin.Context) {
-	nsID := getNSID(ctx)
-	vmID := getVMID(ctx)
+	groupID, nsID, vmID := getIDs(ctx)
 
-	key := getKey(nsID, vmID)
+	key := getKey(groupID, nsID, vmID)
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
@@ -135,14 +132,13 @@ func (h *VirtualMachineHandler) Delete(ctx *gin.Context) {
 	})
 }
 
-func getNSID(ctx *gin.Context) string {
-	return ctx.Param("namespace_id")
+func getIDs(ctx *gin.Context) (groupID, nsID, vmID string) {
+	groupID = ctx.Param("group_id")
+	nsID = ctx.Param("namespace_id")
+	vmID = ctx.Param("virtual_machine_id")
+	return groupID, nsID, vmID
 }
 
-func getVMID(ctx *gin.Context) string {
-	return ctx.Param("virtual_machine_id")
-}
-
-func getKey(nsID, vmID string) string {
-	return filepath.Join("virtualmachine", nsID, vmID)
+func getKey(groupID, nsID, vmID string) string {
+	return filepath.Join("virtualmachine", groupID, nsID, vmID)
 }
