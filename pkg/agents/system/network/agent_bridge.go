@@ -16,7 +16,7 @@ const (
 )
 
 func syncBridgeNetwork(network *system.Network) error {
-	bridgeName := utils.GenerateName("hum-br-", network.ID)
+	bridgeName := utils.GenerateName("hum-br-", network.Group+network.Namespace+network.ID)
 	log.Printf("create bridge `%s`\n", bridgeName)
 	br, err := iproute2.NewBridge(bridgeName)
 	if err != nil {
