@@ -51,43 +51,50 @@ func (a *VirtualMachineAgent) Run() {
 	for {
 		select {
 		case <-ticker.C:
-			nsList, err := a.client.CoreV0().Namespace().List()
+			grList, err := a.client.CoreV0().Group().List()
 			if err != nil {
 				log.Println(err)
 				continue
 			}
 
-			for _, ns := range nsList {
-				vmList, err := a.client.SystemV0().VirtualMachine().List(ns.ID)
+			for _, group := range grList {
+				nsList, err := a.client.CoreV0().Namespace().List(group.ID)
 				if err != nil {
 					log.Println(err)
 					continue
 				}
 
-				for _, vm := range vmList {
-					oldHash := vm.ResourceHash
-					if vm.Annotations[VirtualMachineV0AnnotationNodeName] != nodeName {
-						continue
-					}
-					err = a.syncVirtualMachine(vm)
+				for _, ns := range nsList {
+					vmList, err := a.client.SystemV0().VirtualMachine().List(group.ID, ns.ID)
 					if err != nil {
 						log.Println(err)
 						continue
 					}
 
-					if vm.ResourceHash == oldHash {
-						log.Printf("vm(`%s`) no update.\n", vm.ID)
-						continue
-					}
+					for _, vm := range vmList {
+						oldHash := vm.ResourceHash
+						if vm.Annotations[VirtualMachineV0AnnotationNodeName] != nodeName {
+							continue
+						}
+						err = a.syncVirtualMachine(vm)
+						if err != nil {
+							log.Println(err)
+							continue
+						}
 
-					_, err := a.client.SystemV0().VirtualMachine().Update(vm)
-					if err != nil {
-						log.Println(err)
-						continue
+						if vm.ResourceHash == oldHash {
+							log.Printf("vm(`%s`) no update.\n", vm.ID)
+							continue
+						}
+
+						_, err := a.client.SystemV0().VirtualMachine().Update(vm)
+						if err != nil {
+							log.Println(err)
+							continue
+						}
 					}
 				}
 			}
-
 		}
 	}
 }
@@ -149,7 +156,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 
 	disks := []string{}
 	for _, bsID := range vm.Spec.BlockStorageIDs {
-		bs, err := a.client.SystemV0().BlockStorage().Get(vm.Namespace, bsID)
+		bs, err := a.client.SystemV0().BlockStorage().Get(vm.Group, vm.Namespace, bsID)
 		if err != nil {
 			return err
 		}
@@ -161,7 +168,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 
 		disks = append(disks,
 			"-drive",
-			fmt.Sprintf("file=./blockstorages/%s/%s,format=qcow2", vm.Namespace, bs.ID),
+			fmt.Sprintf("file=./blockstorages/%s/%s/%s,format=qcow2", vm.Group, vm.Namespace, bs.ID),
 		)
 	}
 
@@ -173,7 +180,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 			nic.MacAddress = generateMacAddress(vm.ID + nic.NetworkID)
 		}
 
-		net, err := a.client.SystemV0().Network().Get(vm.Namespace, nic.NetworkID)
+		net, err := a.client.SystemV0().Network().Get(vm.Group, vm.Namespace, nic.NetworkID)
 		if err != nil {
 			return err
 		}
@@ -234,7 +241,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 	networkConfigConfigs := []cloudinit.NetworkConfigConfig{}
 	for i, nic := range vm.Spec.NICs {
 		// 上のやつと統合するべき
-		n, err := a.client.SystemV0().Network().Get(vm.Namespace, nic.NetworkID)
+		n, err := a.client.SystemV0().Network().Get(vm.Group, vm.Namespace, nic.NetworkID)
 		if err != nil {
 			return err
 		}
@@ -266,10 +273,10 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 	}
 
 	ci := cloudinit.NewCloudInit(metaData, userData, networkConfig)
-	ci.Output(filepath.Join("./virtualmachines", vm.Namespace))
+	ci.Output(filepath.Join("./virtualmachines", vm.Group, vm.Namespace))
 	disks = append(disks,
 		"-drive",
-		fmt.Sprintf("file=./virtualmachines/%s/%s/cloudinit.img,format=raw", vm.Namespace, vm.Spec.UUID),
+		fmt.Sprintf("file=./virtualmachines/%s/%s/%s/cloudinit.img,format=raw", vm.Group, vm.Namespace, vm.Spec.UUID),
 	)
 
 	displayNumber := int32(0)
@@ -359,7 +366,7 @@ func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) erro
 			return err
 		}
 
-		err = a.client.SystemV0().VirtualMachine().Delete(vm.Namespace, vm.ID)
+		err = a.client.SystemV0().VirtualMachine().Delete(vm.Group, vm.Namespace, vm.ID)
 		if err != nil {
 			return err
 		}
