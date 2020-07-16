@@ -13,6 +13,7 @@ var (
 		Use:   "humstack",
 		Short: "humstack cli",
 	}
+	group     string
 	namespace string
 )
 
@@ -24,6 +25,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file")
+	rootCmd.PersistentFlags().StringVar(&group, "g", "default", "group id")
 	rootCmd.PersistentFlags().StringVar(&namespace, "n", "default", "namespace id")
 
 }

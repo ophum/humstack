@@ -19,7 +19,7 @@ var getBlockStorageCmd = &cobra.Command{
 	Use: "blockstorage",
 	Run: func(cmd *cobra.Command, args []string) {
 		clients := client.NewClients("localhost", 8080)
-		bsList, err := clients.SystemV0().BlockStorage().List(namespace)
+		bsList, err := clients.SystemV0().BlockStorage().List(group, namespace)
 		if err != nil {
 			log.Fatal(err)
 		}
