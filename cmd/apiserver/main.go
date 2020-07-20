@@ -17,10 +17,15 @@ import (
 	"github.com/ophum/humstack/pkg/api/system/virtualmachine"
 	vmv0 "github.com/ophum/humstack/pkg/api/system/virtualmachine/v0"
 	store "github.com/ophum/humstack/pkg/store/memory"
+
+	"github.com/gin-contrib/cors"
 )
 
 func main() {
 	r := gin.Default()
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowOrigins = []string{"*"}
+	r.Use(cors.New(corsConfig))
 
 	s := store.NewMemoryStore()
 	grh := grv0.NewGroupHandler(s)
