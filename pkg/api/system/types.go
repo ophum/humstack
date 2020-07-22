@@ -81,7 +81,7 @@ type BlockStorageStatus struct {
 	State BlockStorageState `json:"state" yaml:"state"`
 }
 type BlockStorage struct {
-	meta.Meta
+	meta.Meta `json:"meta" yaml:"meta"`
 
 	Spec   BlockStorageSpec   `json:"spec" yaml:"spec"`
 	Status BlockStorageStatus `json:"status" yaml:"status"`
