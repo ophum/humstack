@@ -172,6 +172,11 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		)
 	}
 
+	vcpus := withUnitToWithoutUnit(vm.Spec.LimitVcpus)
+	vcpusInt, err := strconv.ParseInt(vcpus, 10, 64)
+	if err != nil {
+		return err
+	}
 	nics := []string{}
 	tapNames := []string{}
 	brNames := []string{}
@@ -196,13 +201,16 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 
 		nics = append(nics,
 			"-device",
-			fmt.Sprintf("virtio-net,netdev=netdev-%s,driver=virtio-net-pci,mac=%s",
+			fmt.Sprintf("virtio-net,netdev=netdev-%s,driver=virtio-net-pci,mac=%s,mq=on,rx_queue_size=1024,tx_queue_size=1024,vectors=%d",
 				net.Annotations["networkv0/bridge_name"],
-				nic.MacAddress),
+				nic.MacAddress,
+				vcpusInt*2+2,
+			),
 			"-netdev",
-			fmt.Sprintf("tap,script=no,downscript=no,id=netdev-%s,vhost=on,ifname=%s",
+			fmt.Sprintf("tap,script=no,downscript=no,id=netdev-%s,vhost=on,ifname=%s,queues=%d",
 				net.Annotations["networkv0/bridge_name"],
 				tapName,
+				vcpusInt,
 			),
 		)
 	}
@@ -289,7 +297,6 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		break
 	}
 
-	vcpus := withUnitToWithoutUnit(vm.Spec.LimitVcpus)
 	command := "qemu-system-x86_64"
 	args := []string{
 		"-enable-kvm",

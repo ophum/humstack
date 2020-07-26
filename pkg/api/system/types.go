@@ -139,7 +139,7 @@ type VirtualMachineStatus struct {
 	State VirtualMachineState `json:"state" yaml:"state"`
 }
 type VirtualMachine struct {
-	meta.Meta
+	meta.Meta `json:"meta" yaml:"meta"`
 
 	Spec   VirtualMachineSpec   `json:"spec" yaml:"spec"`
 	Status VirtualMachineStatus `json:"status" yaml:"status"`
