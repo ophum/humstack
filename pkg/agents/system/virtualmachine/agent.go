@@ -193,7 +193,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		if _, ok := net.Annotations["networkv0/bridge_name"]; !ok {
 			return fmt.Errorf("network is not active")
 		}
-		tapName := utils.GenerateName("hum-vm-", net.Annotations["networkv0/bridge_name"])
+		tapName := utils.GenerateName("hum-vm-", net.Annotations["networkv0/bridge_name"]+vm.ID)
 		tapName = fmt.Sprintf("%s-%02d", tapName[:len(tapName)-3], i)
 
 		tapNames = append(tapNames, tapName)
@@ -398,6 +398,10 @@ func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) erro
 }
 
 func getPID(uuid string) (int64, error) {
+	if uuid == "" {
+		return -1, nil
+	}
+
 	command := "sh"
 	args := []string{
 		"-c",
