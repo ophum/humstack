@@ -3,6 +3,7 @@ package memory
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 )
@@ -19,14 +20,21 @@ func NewMemoryStore() *MemoryStore {
 	}
 }
 
-func (s *MemoryStore) List(prefix string) []interface{} {
+func (s *MemoryStore) List(prefix string, f func(n int) []interface{}) []interface{} {
 	list := []interface{}{}
 	for k, obj := range s.data {
 		if strings.HasPrefix(k, prefix) {
 			list = append(list, obj)
 		}
 	}
-	return list
+
+	m := f(len(list))
+	for i, o := range list {
+		a := reflect.Indirect(reflect.ValueOf(m[i]))
+		a.Set(reflect.ValueOf(o))
+	}
+
+	return nil
 }
 
 func (s *MemoryStore) Get(key string) interface{} {

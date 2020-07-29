@@ -27,11 +27,18 @@ func NewNamespaceHandler(store store.Store) *NamespaceHandler {
 
 func (h *NamespaceHandler) FindAll(ctx *gin.Context) {
 	groupID := getGroupID(ctx)
-	list := h.store.List(getKey(groupID, ""))
-	nsList := []core.Namespace{}
-	for _, o := range list {
-		nsList = append(nsList, o.(core.Namespace))
+
+	nsList := []*core.Namespace{}
+	f := func(n int) []interface{} {
+		m := []interface{}{}
+		for i := 0; i < n; i++ {
+			ns := &core.Namespace{}
+			nsList = append(nsList, ns)
+			m = append(m, ns)
+		}
+		return m
 	}
+	h.store.List(getKey(groupID, ""), f)
 
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"namespaces": nsList,

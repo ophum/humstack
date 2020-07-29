@@ -28,14 +28,21 @@ func NewNetworkHandler(store store.Store) *NetworkHandler {
 func (h *NetworkHandler) FindAll(ctx *gin.Context) {
 	groupID, nsID, _ := getIDs(ctx)
 
-	list := h.store.List(getKey(groupID, nsID, ""))
-	nsList := []system.Network{}
-	for _, o := range list {
-		nsList = append(nsList, o.(system.Network))
+	netList := []*system.Network{}
+	f := func(n int) []interface{} {
+		m := []interface{}{}
+		for i := 0; i < n; i++ {
+			net := &system.Network{}
+			netList = append(netList, net)
+			m = append(m, net)
+		}
+		return m
 	}
 
+	h.store.List(getKey(groupID, nsID, ""), f)
+
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
-		"networks": nsList,
+		"networks": netList,
 	})
 }
 

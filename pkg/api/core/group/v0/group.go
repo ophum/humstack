@@ -25,11 +25,17 @@ func NewGroupHandler(store store.Store) *GroupHandler {
 }
 
 func (h *GroupHandler) FindAll(ctx *gin.Context) {
-	list := h.store.List("group/")
-	groupList := []core.Group{}
-	for _, o := range list {
-		groupList = append(groupList, o.(core.Group))
+	groupList := []*core.Group{}
+	f := func(n int) []interface{} {
+		m := []interface{}{}
+		for i := 0; i < n; i++ {
+			group := &core.Group{}
+			groupList = append(groupList, group)
+			m = append(m, group)
+		}
+		return m
 	}
+	h.store.List("group/", f)
 
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"groups": groupList,

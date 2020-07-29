@@ -27,11 +27,17 @@ func NewVirtualMachineHandler(store store.Store) *VirtualMachineHandler {
 func (h *VirtualMachineHandler) FindAll(ctx *gin.Context) {
 	groupID, nsID, _ := getIDs(ctx)
 
-	list := h.store.List(getKey(groupID, nsID, ""))
-	vmList := []system.VirtualMachine{}
-	for _, o := range list {
-		vmList = append(vmList, o.(system.VirtualMachine))
+	vmList := []*system.VirtualMachine{}
+	f := func(n int) []interface{} {
+		m := []interface{}{}
+		for i := 0; i < n; i++ {
+			vm := &system.VirtualMachine{}
+			vmList = append(vmList, vm)
+			m = append(m, vm)
+		}
+		return m
 	}
+	h.store.List(getKey(groupID, nsID, ""), f)
 
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"virtualmachines": vmList,

@@ -27,11 +27,18 @@ func NewBlockStorageHandler(store store.Store) *BlockStorageHandler {
 func (h *BlockStorageHandler) FindAll(ctx *gin.Context) {
 	groupID, nsID, _ := getIDs(ctx)
 
-	list := h.store.List(getKey(groupID, nsID, ""))
-	bsList := []system.BlockStorage{}
-	for _, o := range list {
-		bsList = append(bsList, o.(system.BlockStorage))
+	bsList := []*system.BlockStorage{}
+	f := func(n int) []interface{} {
+		m := []interface{}{}
+		for i := 0; i < n; i++ {
+			bs := &system.BlockStorage{}
+			bsList = append(bsList, bs)
+			m = append(m, bs)
+		}
+		return m
 	}
+
+	h.store.List(getKey(groupID, nsID, ""), f)
 
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"blockstorages": bsList,

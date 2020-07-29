@@ -27,11 +27,18 @@ func NewNodeHandler(store store.Store) *NodeHandler {
 
 func (h *NodeHandler) FindAll(ctx *gin.Context) {
 
-	list := h.store.List(getKey(""))
-	nodeList := []system.Node{}
-	for _, o := range list {
-		nodeList = append(nodeList, o.(system.Node))
+	nodeList := []*system.Node{}
+	f := func(n int) []interface{} {
+		m := []interface{}{}
+		for i := 0; i < n; i++ {
+			node := &system.Node{}
+			nodeList = append(nodeList, node)
+			m = append(m, node)
+		}
+		return m
 	}
+
+	h.store.List(getKey(""), f)
 
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"nodes": nodeList,
@@ -140,9 +147,18 @@ func (h *NodeHandler) Delete(ctx *gin.Context) {
 }
 
 func (h *NodeHandler) isIDDuplicate(node *system.Node) bool {
-	list := h.store.List(getKey(""))
-	for _, o := range list {
-		n := o.(system.Node)
+	list := []*system.Node{}
+	f := func(n int) []interface{} {
+		m := []interface{}{}
+		for i := 0; i < n; i++ {
+			node := &system.Node{}
+			list = append(list, node)
+			m = append(m, node)
+		}
+		return m
+	}
+	h.store.List(getKey(""), f)
+	for _, n := range list {
 		if n.ID == node.ID {
 			return true
 		}
