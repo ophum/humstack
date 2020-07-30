@@ -48,13 +48,13 @@ func (h *VirtualMachineHandler) FindAll(ctx *gin.Context) {
 func (h *VirtualMachineHandler) Find(ctx *gin.Context) {
 	groupID, nsID, vmID := getIDs(ctx)
 
-	obj := h.store.Get(getKey(groupID, nsID, vmID))
-	if obj == nil {
+	var vm system.VirtualMachine
+	err := h.store.Get(getKey(groupID, nsID, vmID), &vm)
+	if err != nil && err.Error() == "Not Found" {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("VirtualMachine `%s` is not found.", vmID), nil)
 		return
 	}
 
-	vm := obj.(system.VirtualMachine)
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"virtualmachine": vm,
 	})
@@ -76,8 +76,9 @@ func (h *VirtualMachineHandler) Create(ctx *gin.Context) {
 	}
 
 	key := getKey(groupID, nsID, request.ID)
-	obj := h.store.Get(key)
-	if obj != nil {
+	var vm system.VirtualMachine
+	err = h.store.Get(key, &vm)
+	if err == nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: VirtualMachine `%s` is already exists.", request.Name), nil)
 		return
 	}
@@ -108,8 +109,9 @@ func (h *VirtualMachineHandler) Update(ctx *gin.Context) {
 	}
 
 	key := getKey(groupID, nsID, request.ID)
-	obj := h.store.Get(key)
-	if obj == nil {
+	var vm system.VirtualMachine
+	err = h.store.Get(key, &vm)
+	if err != nil && err.Error() == "Not Found" {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: VirtualMachine `%s` is not found.", request.Name), nil)
 		return
 	}

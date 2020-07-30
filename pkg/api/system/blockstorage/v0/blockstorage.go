@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/api/system/blockstorage"
@@ -49,13 +50,13 @@ func (h *BlockStorageHandler) FindAll(ctx *gin.Context) {
 func (h *BlockStorageHandler) Find(ctx *gin.Context) {
 	groupID, nsID, bsID := getIDs(ctx)
 
-	obj := h.store.Get(getKey(groupID, nsID, bsID))
-	if obj == nil {
+	var bs system.BlockStorage
+	err := h.store.Get(getKey(groupID, nsID, bsID), &bs)
+	if err != nil && err.Error() == "Not Found" {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("BlockStorage `%s` is not found.", bsID), nil)
 		return
 	}
 
-	bs := obj.(system.BlockStorage)
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"blockstorage": bs,
 	})
@@ -64,14 +65,15 @@ func (h *BlockStorageHandler) Find(ctx *gin.Context) {
 func (h *BlockStorageHandler) Create(ctx *gin.Context) {
 	groupID, nsID, _ := getIDs(ctx)
 
-	obj := h.store.Get(filepath.Join("namespace", groupID, nsID))
-	if obj == nil {
+	var ns core.Namespace
+	err := h.store.Get(filepath.Join("namespace", groupID, nsID), &ns)
+	if err != nil && err.Error() == "Not Found" {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: namespace is not found."), nil)
 		return
 	}
 
 	var request system.BlockStorage
-	err := ctx.Bind(&request)
+	err = ctx.Bind(&request)
 	if err != nil {
 		meta.ResponseJSON(ctx, http.StatusBadRequest, err, nil)
 		return
@@ -91,8 +93,9 @@ func (h *BlockStorageHandler) Create(ctx *gin.Context) {
 	}
 
 	key := getKey(groupID, nsID, request.ID)
-	obj = h.store.Get(key)
-	if obj != nil {
+	var bs system.BlockStorage
+	err = h.store.Get(key, &bs)
+	if err == nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: BlockStorage `%s` is already exists.", request.Name), nil)
 		return
 	}

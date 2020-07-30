@@ -2,7 +2,9 @@ package memory
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 	"sync"
@@ -20,7 +22,7 @@ func NewMemoryStore() *MemoryStore {
 	}
 }
 
-func (s *MemoryStore) List(prefix string, f func(n int) []interface{}) []interface{} {
+func (s *MemoryStore) List(prefix string, f func(n int) []interface{}) error {
 	list := []interface{}{}
 	for k, obj := range s.data {
 		if strings.HasPrefix(k, prefix) {
@@ -37,11 +39,14 @@ func (s *MemoryStore) List(prefix string, f func(n int) []interface{}) []interfa
 	return nil
 }
 
-func (s *MemoryStore) Get(key string) interface{} {
+func (s *MemoryStore) Get(key string, v interface{}) error {
 	if d, ok := s.data[key]; ok {
-		return d
+		a := reflect.Indirect(reflect.ValueOf(v))
+		a.Set(reflect.ValueOf(d))
+		log.Println(v)
+		return nil
 	}
-	return nil
+	return errors.New("Not Found")
 }
 
 func (s *MemoryStore) Put(key string, data interface{}) {

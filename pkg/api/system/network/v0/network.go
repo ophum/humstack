@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/api/system/network"
@@ -49,15 +50,15 @@ func (h *NetworkHandler) FindAll(ctx *gin.Context) {
 func (h *NetworkHandler) Find(ctx *gin.Context) {
 	groupID, nsID, netID := getIDs(ctx)
 
-	obj := h.store.Get(getKey(groupID, nsID, netID))
-	if obj == nil {
+	var net system.Network
+	err := h.store.Get(getKey(groupID, nsID, netID), &net)
+	if err != nil && err.Error() == "Not Found" {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Network `%s` is not found.", nsID), nil)
 		return
 	}
 
-	ns := obj.(system.Network)
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
-		"network": ns,
+		"network": net,
 	})
 }
 
@@ -77,16 +78,18 @@ func (h *NetworkHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	obj := h.store.Get(filepath.Join("namespace", groupID, nsID))
-	if obj == nil {
+	var ns core.Namespace
+	err = h.store.Get(filepath.Join("namespace", groupID, nsID), &ns)
+	if err != nil && err.Error() == "Not Found" {
 		log.Println("error")
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: namespace is not found."), nil)
 		return
 	}
 
 	key := getKey(groupID, nsID, request.ID)
-	obj = h.store.Get(key)
-	if obj != nil {
+	var net system.Network
+	err = h.store.Get(key, &net)
+	if err == nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: Network `%s` is already exists.", request.Name), nil)
 		return
 	}
@@ -117,8 +120,9 @@ func (h *NetworkHandler) Update(ctx *gin.Context) {
 	}
 
 	key := getKey(groupID, nsID, netID)
-	obj := h.store.Get(key)
-	if obj == nil {
+	var net system.Network
+	err = h.store.Get(key, &net)
+	if err != nil && err.Error() == "Not Found" {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: Network `%s` is not found in Namespace `%s`.", netID, nsID), nil)
 		return
 	}

@@ -49,13 +49,13 @@ func (h *NodeHandler) FindAll(ctx *gin.Context) {
 func (h *NodeHandler) Find(ctx *gin.Context) {
 	nodeID := getNodeID(ctx)
 
-	obj := h.store.Get(getKey(nodeID))
-	if obj == nil {
+	var node system.Node
+	err := h.store.Get(getKey(nodeID), &node)
+	if err != nil && err.Error() == "Not Found" {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Node `%s` is not found.", nodeID), nil)
 		return
 	}
 
-	node := obj.(system.Node)
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"node": node,
 	})
@@ -76,8 +76,9 @@ func (h *NodeHandler) Create(ctx *gin.Context) {
 	}
 
 	key := getKey(request.ID)
-	obj := h.store.Get(key)
-	if obj != nil {
+	var node system.Node
+	err = h.store.Get(key, &node)
+	if err == nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: Node `%s` is already exists.", request.Name), nil)
 		return
 	}
@@ -116,8 +117,9 @@ func (h *NodeHandler) Update(ctx *gin.Context) {
 	}
 
 	key := getKey(nodeID)
-	obj := h.store.Get(key)
-	if obj == nil {
+	var node system.Node
+	err = h.store.Get(key, &node)
+	if err != nil && err.Error() == "Not Found" {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: Node `%s` is not found.", request.Name), nil)
 		return
 	}

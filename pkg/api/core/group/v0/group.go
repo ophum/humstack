@@ -44,13 +44,13 @@ func (h *GroupHandler) FindAll(ctx *gin.Context) {
 
 func (h *GroupHandler) Find(ctx *gin.Context) {
 	groupID := ctx.Param("group_id")
-	obj := h.store.Get(getKey(groupID))
-	if obj == nil {
+	var group core.Group
+	err := h.store.Get(getKey(groupID), &group)
+	if err != nil && err.Error() == "Not Found" {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Group `%s` is not found.", groupID), nil)
 		return
 	}
 
-	group := obj.(core.Group)
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"group": group,
 	})
@@ -73,8 +73,9 @@ func (h *GroupHandler) Create(ctx *gin.Context) {
 	}
 
 	key := getKey(request.ID)
-	obj := h.store.Get(key)
-	if obj != nil {
+	var group core.Group
+	err = h.store.Get(key, &group)
+	if err != nil && err.Error() != "Not Found" {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: group `%s` is already exists.", request.Name), nil)
 		return
 	}
@@ -105,8 +106,9 @@ func (h *GroupHandler) Update(ctx *gin.Context) {
 	}
 
 	key := getKey(request.ID)
-	obj := h.store.Get(key)
-	if obj == nil {
+	var group core.Group
+	err = h.store.Get(key, &group)
+	if err != nil && err.Error() == "Not Found" {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: group `%s` is not found.", request.ID), nil)
 		return
 	}

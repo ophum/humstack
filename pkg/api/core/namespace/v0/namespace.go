@@ -48,13 +48,14 @@ func (h *NamespaceHandler) FindAll(ctx *gin.Context) {
 func (h *NamespaceHandler) Find(ctx *gin.Context) {
 	groupID := getGroupID(ctx)
 	nsID := getNSID(ctx)
-	obj := h.store.Get(getKey(groupID, nsID))
-	if obj == nil {
+
+	var ns core.Namespace
+	err := h.store.Get(getKey(groupID, nsID), &ns)
+	if err != nil && err.Error() == "Not Found" {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Namespace `%s` is not found.", nsID), nil)
 		return
 	}
 
-	ns := obj.(core.Namespace)
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"namespace": ns,
 	})
@@ -77,8 +78,9 @@ func (h *NamespaceHandler) Create(ctx *gin.Context) {
 	}
 
 	key := getKey(request.Group, request.ID)
-	obj := h.store.Get(key)
-	if obj != nil {
+	var ns core.Namespace
+	err = h.store.Get(key, &ns)
+	if err == nil {
 		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: namespace `%s` is already exists.", request.Name), nil)
 		return
 	}
@@ -115,8 +117,9 @@ func (h *NamespaceHandler) Update(ctx *gin.Context) {
 	}
 
 	key := getKey(request.Group, request.ID)
-	obj := h.store.Get(key)
-	if obj == nil {
+	var ns core.Namespace
+	err = h.store.Get(key, &ns)
+	if err != nil && err.Error() == "Not Found" {
 		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: namespace `%s` is not found.", request.ID), nil)
 		return
 	}
