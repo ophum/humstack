@@ -16,7 +16,9 @@ import (
 	nodev0 "github.com/ophum/humstack/pkg/api/system/node/v0"
 	"github.com/ophum/humstack/pkg/api/system/virtualmachine"
 	vmv0 "github.com/ophum/humstack/pkg/api/system/virtualmachine/v0"
-	store "github.com/ophum/humstack/pkg/store/memory"
+
+	//store "github.com/ophum/humstack/pkg/store/memory"
+	store "github.com/ophum/humstack/pkg/store/leveldb"
 
 	"github.com/gin-contrib/cors"
 )
@@ -27,7 +29,13 @@ func main() {
 	corsConfig.AllowOrigins = []string{"*"}
 	r.Use(cors.New(corsConfig))
 
-	s := store.NewMemoryStore()
+	//s := store.NewMemoryStore()
+	s, err := store.NewLevelDBStore("./database")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer s.Close()
+
 	grh := grv0.NewGroupHandler(s)
 	nsh := nsv0.NewNamespaceHandler(s)
 	nwh := netv0.NewNetworkHandler(s)
