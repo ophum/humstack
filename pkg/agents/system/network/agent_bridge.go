@@ -24,6 +24,9 @@ func syncBridgeNetwork(network *system.Network) error {
 	}
 
 	if gw, ok := network.Annotations[NetworkV0AnnotationDefaultGateway]; ok {
+		if gw == "" {
+			goto END
+		}
 		_, ipnet, err := net.ParseCIDR(gw)
 		if err != nil {
 			return err
@@ -36,7 +39,7 @@ func syncBridgeNetwork(network *system.Network) error {
 			return err
 		}
 	}
-
+END:
 	network.Annotations[NetworkV0AnnotationBridgeName] = bridgeName
 	return setHash(network)
 
