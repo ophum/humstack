@@ -16,6 +16,8 @@ import (
 	nodev0 "github.com/ophum/humstack/pkg/api/system/node/v0"
 	"github.com/ophum/humstack/pkg/api/system/virtualmachine"
 	vmv0 "github.com/ophum/humstack/pkg/api/system/virtualmachine/v0"
+	"github.com/ophum/humstack/pkg/api/system/virtualrouter"
+	vrv0 "github.com/ophum/humstack/pkg/api/system/virtualrouter/v0"
 
 	//store "github.com/ophum/humstack/pkg/store/memory"
 	store "github.com/ophum/humstack/pkg/store/leveldb"
@@ -41,6 +43,7 @@ func main() {
 	nwh := netv0.NewNetworkHandler(s)
 	bsh := bsv0.NewBlockStorageHandler(s)
 	vmh := vmv0.NewVirtualMachineHandler(s)
+	vrh := vrv0.NewVirtualRouterHandler(s)
 	nodeh := nodev0.NewNodeHandler(s)
 
 	v0 := r.Group("/api/v0")
@@ -50,12 +53,15 @@ func main() {
 		nwi := network.NewNetworkHandler(v0, nwh)
 		bsi := blockstorage.NewBlockStorageHandler(v0, bsh)
 		vmi := virtualmachine.NewVirtualMachineHandler(v0, vmh)
+		vri := virtualrouter.NewVirtualRouterHandler(v0, vrh)
 		nodei := node.NewNodeHandler(v0, nodeh)
+
 		gri.RegisterHandlers()
 		nsi.RegisterHandlers()
 		nwi.RegisterHandlers()
 		bsi.RegisterHandlers()
 		vmi.RegisterHandlers()
+		vri.RegisterHandlers()
 		nodei.RegisterHandlers()
 	}
 

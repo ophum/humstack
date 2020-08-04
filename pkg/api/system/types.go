@@ -169,3 +169,47 @@ type Node struct {
 	Spec   NodeSpec   `json:"spec" yaml:"spec"`
 	Status NodeStatus `json:"status" yaml:"status"`
 }
+
+type NATRuleType string
+
+const (
+	NATRuleTypeDNAT NATRuleType = "DNAT"
+	NATRuleTypeSNAT NATRuleType = "SNAT"
+	NATRuleTypeNAPT NATRuleType = "NAPT"
+)
+
+type NATRule struct {
+	Type            NATRuleType `json:"type" yaml:"rule"`
+	SrcNetwork      string      `json:"srcNetwork" yaml:"srcNetwork"`
+	DestNetwork     string      `json:"destNetwork" yaml:"destNetwork"`
+	InputInterface  string      `json:"inputInterface" yaml:"inputInterface"`
+	OutputInterface string      `json:"outputInterface" yaml:"outputInterface"`
+}
+
+type VirtualRouterNIC struct {
+	NetworkID   string `json:"networkID" yaml:"networkID"`
+	IPv4Address string `json:"ipv4Address" yaml:"ipv4Address"`
+}
+type VirtualRouterSpec struct {
+	ExternalIP string             `json:"externalIP" yaml:"externalIP"`
+	NICs       []VirtualRouterNIC `json:"nics" yaml:"nics"`
+	NATRules   []NATRule          `json:"natRules" yaml:"natRules"`
+}
+
+type VirtualRouterState string
+
+const (
+	VirtualRouterStatePending VirtualRouterState = "Pending"
+	VirtualRouterStateRunning VirtualRouterState = "Running"
+)
+
+type VirtualRouterStatus struct {
+	State VirtualRouterState `json:"state" yaml:"state"`
+}
+
+type VirtualRouter struct {
+	meta.Meta `json:"meta" yaml:"meta"`
+
+	Spec   VirtualRouterSpec   `json:"spec" yaml:"spec"`
+	Status VirtualRouterStatus `json:"status" yaml:"status"`
+}
