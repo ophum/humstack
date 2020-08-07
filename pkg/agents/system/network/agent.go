@@ -66,6 +66,13 @@ func (a *NetworkAgent) Run() {
 								log.Println(err)
 								continue
 							}
+						case NetworkV0NetworkTypeVXLAN:
+							err = syncVXLANNetwork(net)
+							if err != nil {
+								log.Println("error sync bridge network")
+								log.Println(err)
+								continue
+							}
 
 						}
 
