@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
 
@@ -11,10 +12,43 @@ import (
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
+	"gopkg.in/yaml.v2"
 )
 
+type Config struct {
+	apiServerAddress    string `yaml:"apiServerAddress"`
+	LimitMemory         string `yaml:"limitMemory"`
+	LimitVcpus          string `yaml:"limitVcpus"`
+	BlockStorageDirPath string `yaml:"blockStorageDirPath"`
+}
+
+var (
+	config Config = Config{}
+)
+
+func init() {
+	var configPath string
+	flag.StringVar(&configPath, "config", "", "config path")
+	flag.Parse()
+
+	if configPath == "" {
+		log.Fatal("unexpected --config")
+	}
+
+	configFile, err := os.Open(configPath)
+	if err != nil {
+		log.Fatal("error open config file")
+	}
+
+	err = yaml.NewDecoder(configFile).Decode(&config)
+	if err != nil {
+		log.Fatal("failed decode config")
+	}
+
+}
+
 func main() {
-	client := client.NewClients("localhost", 8080)
+	client := client.NewClients(config.apiServerAddress, 8080)
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Fatal(err)
@@ -26,14 +60,14 @@ func main() {
 			Name: hostname,
 		},
 		Spec: system.NodeSpec{
-			LimitMemory: "8Gi",
-			LimitVcpus:  "10000m",
+			LimitMemory: config.LimitMemory,
+			LimitVcpus:  config.LimitVcpus,
 		},
 	}, client)
 
 	netAgent := network.NewNetworkAgent(client)
 
-	bsAgent := blockstorage.NewBlockStorageAgent(client, "./blockstorages")
+	bsAgent := blockstorage.NewBlockStorageAgent(client, config.BlockStorageDirPath)
 
 	vmAgent := virtualmachine.NewVirtualMachineAgent(client)
 

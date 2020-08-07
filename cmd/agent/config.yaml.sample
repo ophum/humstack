@@ -1,0 +1,4 @@
+apiServerAddress: http://localhost
+limitMemory: 8G
+limitVcpus: 8000m
+blockStorageDirPath: ./blockstorages
