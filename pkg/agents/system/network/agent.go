@@ -13,6 +13,7 @@ import (
 
 type NetworkAgent struct {
 	client *client.Clients
+	config *NetworkAgentConfig
 }
 
 const (
@@ -25,9 +26,10 @@ const (
 	NetworkV0NetworkTypeBridge = "Bridge"
 )
 
-func NewNetworkAgent(client *client.Clients) *NetworkAgent {
+func NewNetworkAgent(client *client.Clients, config *NetworkAgentConfig) *NetworkAgent {
 	return &NetworkAgent{
 		client: client,
+		config: config,
 	}
 }
 
@@ -67,7 +69,7 @@ func (a *NetworkAgent) Run() {
 								continue
 							}
 						case NetworkV0NetworkTypeVXLAN:
-							err = syncVXLANNetwork(net)
+							err = a.syncVXLANNetwork(net)
 							if err != nil {
 								log.Println("error sync bridge network")
 								log.Println(err)

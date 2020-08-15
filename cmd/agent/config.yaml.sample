@@ -2,3 +2,8 @@ apiServerAddress: http://localhost
 limitMemory: 8G
 limitVcpus: 8000m
 blockStorageDirPath: ./blockstorages
+
+networkAgentConfig:
+  vxlan:
+    devName: eth0
+    group: 239.0.0.1

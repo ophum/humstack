@@ -52,8 +52,7 @@ func TestNetworkCreate(t *testing.T) {
 			Namespace: namespaceID,
 			Group:     groupID,
 			Annotations: map[string]string{
-				"networkv0/network_type":    "Bridge",
-				"networkv0/default_gateway": "10.0.0.1/24",
+				"networkv0/network_type": "VXLAN",
 			},
 		},
 		Spec: system.NetworkSpec{

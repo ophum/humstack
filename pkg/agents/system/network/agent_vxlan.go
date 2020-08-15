@@ -12,7 +12,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func syncVXLANNetwork(network *system.Network) error {
+func (a *NetworkAgent) syncVXLANNetwork(network *system.Network) error {
 
 	bridgeName := utils.GenerateName("hum-br-", network.Group+network.Namespace+network.ID)
 	vxlanName := utils.GenerateName("hum-vx-", network.Group+network.Namespace+network.ID)
@@ -28,7 +28,11 @@ func syncVXLANNetwork(network *system.Network) error {
 	if err != nil {
 		return err
 	}
-	vx, err := vxlan.NewVxlan(vxlanName, int(id), net.ParseIP("239.1.1.1"), 1)
+	dev, err := netlink.LinkByName(a.config.VXLAN.DevName)
+	if err != nil {
+		return err
+	}
+	vx, err := vxlan.NewVxlan(vxlanName, int(id), net.ParseIP(a.config.VXLAN.Group), dev.Attrs().Index)
 	if err != nil {
 		return err
 	}
@@ -42,5 +46,8 @@ func syncVXLANNetwork(network *system.Network) error {
 		return err
 	}
 
-	return nil
+	network.Annotations[NetworkV0AnnotationBridgeName] = bridgeName
+	network.Annotations[NetworkV0AnnotationVXLANName] = vxlanName
+
+	return setHash(network)
 }

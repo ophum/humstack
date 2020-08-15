@@ -20,6 +20,8 @@ type Config struct {
 	LimitMemory         string `yaml:"limitMemory"`
 	LimitVcpus          string `yaml:"limitVcpus"`
 	BlockStorageDirPath string `yaml:"blockStorageDirPath"`
+
+	NetworkAgentConfig network.NetworkAgentConfig `yaml:"networkAgentConfig"`
 }
 
 var (
@@ -65,7 +67,7 @@ func main() {
 		},
 	}, client)
 
-	netAgent := network.NewNetworkAgent(client)
+	netAgent := network.NewNetworkAgent(client, &config.NetworkAgentConfig)
 
 	bsAgent := blockstorage.NewBlockStorageAgent(client, config.BlockStorageDirPath)
 

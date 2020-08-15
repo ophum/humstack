@@ -10,11 +10,6 @@ import (
 	"github.com/ophum/humstack/pkg/api/system"
 )
 
-const (
-	NetworkV0AnnotationBridgeName     = "networkv0/bridge_name"
-	NetworkV0AnnotationDefaultGateway = "networkv0/default_gateway"
-)
-
 func syncBridgeNetwork(network *system.Network) error {
 	bridgeName := utils.GenerateName("hum-br-", network.Group+network.Namespace+network.ID)
 	log.Printf("create bridge `%s`\n", bridgeName)
