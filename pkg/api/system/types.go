@@ -191,9 +191,10 @@ type VirtualRouterNIC struct {
 	IPv4Address string `json:"ipv4Address" yaml:"ipv4Address"`
 }
 type VirtualRouterSpec struct {
-	ExternalIP string             `json:"externalIP" yaml:"externalIP"`
-	NICs       []VirtualRouterNIC `json:"nics" yaml:"nics"`
-	NATRules   []NATRule          `json:"natRules" yaml:"natRules"`
+	ExternalGateway string             `json:"externalGateway" yaml:"externalGateway"`
+	ExternalIP      string             `json:"externalIP" yaml:"externalIP"`
+	NICs            []VirtualRouterNIC `json:"nics" yaml:"nics"`
+	NATRules        []NATRule          `json:"natRules" yaml:"natRules"`
 }
 
 type VirtualRouterState string

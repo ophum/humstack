@@ -41,11 +41,13 @@ func TestVirtualRouterCreate(t *testing.T) {
 	netClient := netv0.NewNetworkClient("http", "localhost", 8080)
 	net, err := netClient.Create(&system.Network{
 		Meta: meta.Meta{
-			ID:          "test-net",
-			Name:        "test-net",
-			Namespace:   ns.ID,
-			Group:       gr.ID,
-			Annotations: map[string]string{},
+			ID:        "test-net",
+			Name:      "test-net",
+			Namespace: ns.ID,
+			Group:     gr.ID,
+			Annotations: map[string]string{
+				"networkv0/network_type": "Bridge",
+			},
 		},
 		Spec: system.NetworkSpec{
 			ID:       "100",
@@ -62,12 +64,17 @@ func TestVirtualRouterCreate(t *testing.T) {
 			Name:      "test-vr",
 			Namespace: ns.ID,
 			Group:     gr.ID,
+			Annotations: map[string]string{
+				"virtualrouterv0/node_name": nodeName,
+			},
 		},
 		Spec: system.VirtualRouterSpec{
+			ExternalGateway: "192.168.10.254",
+			ExternalIP:      "192.168.10.100/24",
 			NICs: []system.VirtualRouterNIC{
 				{
 					NetworkID:   net.ID,
-					IPv4Address: "10.0.0.254",
+					IPv4Address: "10.0.0.254/24",
 				},
 			},
 			NATRules: []system.NATRule{

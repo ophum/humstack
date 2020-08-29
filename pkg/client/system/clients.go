@@ -5,6 +5,7 @@ import (
 	netv0 "github.com/ophum/humstack/pkg/client/system/network/v0"
 	nodev0 "github.com/ophum/humstack/pkg/client/system/node/v0"
 	vmv0 "github.com/ophum/humstack/pkg/client/system/virtualmachine/v0"
+	vrv0 "github.com/ophum/humstack/pkg/client/system/virtualrouter/v0"
 )
 
 type SystemV0Clients struct {
@@ -15,6 +16,7 @@ type SystemV0Clients struct {
 	networkClient        *netv0.NetworkClient
 	blockstorageClient   *bsv0.BlockStorageClient
 	virtualmachineClient *vmv0.VirtualMachineClient
+	virtualrouterClient  *vrv0.VirtualRouterClient
 }
 
 func NewSystemV0Clients(apiServerAddress string, apiServerPort int32) *SystemV0Clients {
@@ -27,6 +29,7 @@ func NewSystemV0Clients(apiServerAddress string, apiServerPort int32) *SystemV0C
 		networkClient:        netv0.NewNetworkClient("http", apiServerAddress, apiServerPort),
 		blockstorageClient:   bsv0.NewBlockStorageClient("http", apiServerAddress, apiServerPort),
 		virtualmachineClient: vmv0.NewVirtualMachineClient("http", apiServerAddress, apiServerPort),
+		virtualrouterClient:  vrv0.NewVirtualRouterClient("http", apiServerAddress, apiServerPort),
 	}
 }
 
@@ -44,4 +47,8 @@ func (c *SystemV0Clients) BlockStorage() *bsv0.BlockStorageClient {
 
 func (c *SystemV0Clients) VirtualMachine() *vmv0.VirtualMachineClient {
 	return c.virtualmachineClient
+}
+
+func (c *SystemV0Clients) VirtualRouter() *vrv0.VirtualRouterClient {
+	return c.virtualrouterClient
 }
