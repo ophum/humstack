@@ -83,6 +83,13 @@ func TestVirtualRouterCreate(t *testing.T) {
 					SrcNetwork: "10.0.0.0/24",
 				},
 			},
+			DNATRules: []system.DNATRule{
+				{
+					DestPort:      10022,
+					ToDestAddress: "10.0.0.1",
+					ToDestPort:    22,
+				},
+			},
 		},
 	})
 	if err != nil {

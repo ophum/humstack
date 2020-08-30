@@ -1,6 +1,7 @@
 package virtualrouter
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -188,6 +189,32 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 		log.Println(err)
 	}
 
+	for _, rule := range vr.Spec.DNATRules {
+		log.Println("dnat rule")
+		err := netnsExec(netnsName, []string{
+			"iptables",
+			"-t", "nat",
+			"-C", "PREROUTING",
+			"-p", "tcp",
+			"-i", rtExVeth,
+			"--dport", fmt.Sprintf("%d", rule.DestPort),
+			"-j", "DNAT",
+			"--to-destination", fmt.Sprintf("%s:%d", rule.ToDestAddress, rule.ToDestPort),
+		})
+		if err != nil {
+			err := netnsExec(netnsName, []string{
+				"iptables",
+				"-t", "nat",
+				"-A", "PREROUTING",
+				"-p", "tcp",
+				"-i", rtExVeth,
+				"--dport", fmt.Sprintf("%d", rule.DestPort),
+				"-j", "DNAT",
+				"--to-destination", fmt.Sprintf("%s:%d", rule.ToDestAddress, rule.ToDestPort),
+			})
+			log.Println(err)
+		}
+	}
 	return nil
 }
 
