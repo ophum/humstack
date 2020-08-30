@@ -224,7 +224,7 @@ func netnsIsExists(name string) bool {
 }
 
 func ipLinkAddVeth(name, peer string) error {
-	cmd := exec.Command("ip", "link", "add", name, "type", "veth", "peer", peer)
+	cmd := exec.Command("ip", "link", "add", name, "type", "veth", "peer", "name", peer)
 	return cmd.Run()
 }
 
