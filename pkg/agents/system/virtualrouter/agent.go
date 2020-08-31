@@ -2,6 +2,7 @@ package virtualrouter
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -104,6 +105,8 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 	netnsName := utils.GenerateName("netns-", vr.Group+vr.Namespace+vr.ID)
 	rtExVeth := utils.GenerateName("hrt-ex-", netnsName)
 	exRtVeth := utils.GenerateName("hex-rt-", netnsName)
+
+	natRule := []string{"*nat"}
 	if !netnsIsExists(netnsName) {
 		log.Println("[VR] netns add")
 		if err := netnsAdd(netnsName); err != nil {
@@ -141,44 +144,8 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 
 		daddr := strings.Split(eip.IPv4Address, "/")[0]
 
-		err := netnsExec(netnsName, []string{
-			"iptables",
-			"-t", "nat",
-			"-C", "PREROUTING",
-			"-d", daddr,
-			"-j", "DNAT",
-			"--to-destination", eip.BindInternalIPv4Address,
-		})
-		if err != nil {
-			netnsExec(netnsName, []string{
-				"iptables",
-				"-t", "nat",
-				"-A", "PREROUTING",
-				"-d", daddr,
-				"-j", "DNAT",
-				"--to-destination", eip.BindInternalIPv4Address,
-			})
-		}
-		err = netnsExec(netnsName, []string{
-			"iptables",
-			"-t", "nat",
-			"-C", "POSTROUTING",
-			"-s", eip.BindInternalIPv4Address,
-			"-j", "SNAT",
-			"--to-source", daddr,
-		})
-		if err != nil {
-			log.Println("snat")
-			err = netnsExec(netnsName, []string{
-				"iptables",
-				"-t", "nat",
-				"-A", "POSTROUTING",
-				"-s", eip.BindInternalIPv4Address,
-				"-j", "SNAT",
-				"--to-source", strings.Split(eip.IPv4Address, "/")[0],
-			})
-			log.Println(err)
-		}
+		natRule = append(natRule, fmt.Sprintf("-A PREROUTING -d %s -j DNAT --to-destination %s", daddr, eip.BindInternalIPv4Address))
+		natRule = append(natRule, fmt.Sprintf("-A POSTROUTING -s %s -j SNAT --to-source %s", eip.BindInternalIPv4Address, daddr))
 	}
 
 	natGatewayIP := strings.Split(vr.Spec.NATGatewayIP, "/")[0]
@@ -214,25 +181,7 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 			return err
 		}
 
-		err = netnsExec(netnsName, []string{
-			"iptables",
-			"-t", "nat",
-			"-C", "POSTROUTING",
-			"-s", n.Spec.IPv4CIDR,
-			"-j", "SNAT",
-			"--to-source", natGatewayIP,
-		})
-		if err != nil {
-			err = netnsExec(netnsName, []string{
-				"iptables",
-				"-t", "nat",
-				"-A", "POSTROUTING",
-				"-s", n.Spec.IPv4CIDR,
-				"-j", "SNAT",
-				"--to-source", natGatewayIP,
-			})
-			log.Println(err)
-		}
+		natRule = append(natRule, fmt.Sprintf("-A POSTROUTING -s %s -j SNAT --to-source %s", n.Spec.IPv4CIDR, natGatewayIP))
 		netnsExec(netnsName, []string{
 			"sh", "-c", `"echo 1 > /proc/sys/net/ipv4/ip_forward"`,
 		})
@@ -244,31 +193,30 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 
 	for _, rule := range vr.Spec.DNATRules {
 		log.Println("dnat rule")
-		err := netnsExec(netnsName, []string{
-			"iptables",
-			"-t", "nat",
-			"-C", "PREROUTING",
-			"-p", "tcp",
-			"-i", rtExVeth,
-			"-d", natGatewayIP,
-			"--dport", fmt.Sprintf("%d", rule.DestPort),
-			"-j", "DNAT",
-			"--to-destination", fmt.Sprintf("%s:%d", rule.ToDestAddress, rule.ToDestPort),
-		})
-		if err != nil {
-			err := netnsExec(netnsName, []string{
-				"iptables",
-				"-t", "nat",
-				"-A", "PREROUTING",
-				"-p", "tcp",
-				"-i", rtExVeth,
-				"-d", natGatewayIP,
-				"--dport", fmt.Sprintf("%d", rule.DestPort),
-				"-j", "DNAT",
-				"--to-destination", fmt.Sprintf("%s:%d", rule.ToDestAddress, rule.ToDestPort),
-			})
-			log.Println(err)
-		}
+		natRule = append(natRule,
+			fmt.Sprintf("-A PREROUTING -p tcp -i %s -d %s --dport %d -j DNAT --to-destination %s:%d",
+				rtExVeth,
+				natGatewayIP,
+				rule.DestPort,
+				rule.ToDestAddress, rule.ToDestPort))
+	}
+
+	natRule = append(natRule, "COMMIT")
+	natFile := strings.Join(natRule, "\n")
+	cmd := exec.Command("ip", "netns", "exec", netnsName, "iptables-restore")
+	w, _ := cmd.StdinPipe()
+	_, err := io.WriteString(w, natFile+"\n")
+	w.Close()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	out, err := cmd.CombinedOutput()
+	log.Println(string(out))
+	if err != nil {
+		log.Println(err)
+		return err
 	}
 	return nil
 }
@@ -313,6 +261,7 @@ func netnsExec(name string, command []string) error {
 	command = append([]string{
 		"netns", "exec", name,
 	}, command...)
+	log.Println(command)
 	cmd := exec.Command("ip", command...)
 	return cmd.Run()
 }
