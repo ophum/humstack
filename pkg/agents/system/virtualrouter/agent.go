@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ophum/humstack/pkg/agents/system/network/utils"
@@ -126,10 +127,61 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 
 		log.Println("[VR] ip address add rtExVeth")
 		netnsExec(netnsName, []string{
-			"ip", "a", "add", vr.Spec.ExternalIP, "dev", rtExVeth,
+			"ip", "a", "add", vr.Spec.NATGatewayIP, "dev", rtExVeth,
 		})
 	}
 
+	for _, eip := range vr.Spec.ExternalIPs {
+		netnsExec(netnsName, []string{
+			"ip", "a", "add", eip.IPv4Address, "dev", rtExVeth,
+		})
+
+		// iptables -t nat -A PREROUTING -d ${daddr} -j DNAT --to-destination ${DEST}
+		// iptables -t nat -A POSTROUTING -s ${saddr} -j SNAT --to-source ${daddr}
+
+		daddr := strings.Split(eip.IPv4Address, "/")[0]
+
+		err := netnsExec(netnsName, []string{
+			"iptables",
+			"-t", "nat",
+			"-C", "PREROUTING",
+			"-d", daddr,
+			"-j", "DNAT",
+			"--to-destination", eip.BindInternalIPv4Address,
+		})
+		if err != nil {
+			netnsExec(netnsName, []string{
+				"iptables",
+				"-t", "nat",
+				"-A", "PREROUTING",
+				"-d", daddr,
+				"-j", "DNAT",
+				"--to-destination", eip.BindInternalIPv4Address,
+			})
+		}
+		err = netnsExec(netnsName, []string{
+			"iptables",
+			"-t", "nat",
+			"-C", "POSTROUTING",
+			"-s", eip.BindInternalIPv4Address,
+			"-j", "SNAT",
+			"--to-source", daddr,
+		})
+		if err != nil {
+			log.Println("snat")
+			err = netnsExec(netnsName, []string{
+				"iptables",
+				"-t", "nat",
+				"-A", "POSTROUTING",
+				"-s", eip.BindInternalIPv4Address,
+				"-j", "SNAT",
+				"--to-source", strings.Split(eip.IPv4Address, "/")[0],
+			})
+			log.Println(err)
+		}
+	}
+
+	natGatewayIP := strings.Split(vr.Spec.NATGatewayIP, "/")[0]
 	for _, nic := range vr.Spec.NICs {
 		log.Println(nic.NetworkID)
 		rtBrVeth := utils.GenerateName("hrt-br-", netnsName+nic.NetworkID)
@@ -167,18 +219,19 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 			"-t", "nat",
 			"-C", "POSTROUTING",
 			"-s", n.Spec.IPv4CIDR,
-			"-o", rtExVeth,
-			"-j", "MASQUERADE",
+			"-j", "SNAT",
+			"--to-source", natGatewayIP,
 		})
 		if err != nil {
-			netnsExec(netnsName, []string{
+			err = netnsExec(netnsName, []string{
 				"iptables",
 				"-t", "nat",
 				"-A", "POSTROUTING",
 				"-s", n.Spec.IPv4CIDR,
-				"-o", rtExVeth,
-				"-j", "MASQUERADE",
+				"-j", "SNAT",
+				"--to-source", natGatewayIP,
 			})
+			log.Println(err)
 		}
 		netnsExec(netnsName, []string{
 			"sh", "-c", `"echo 1 > /proc/sys/net/ipv4/ip_forward"`,
@@ -197,6 +250,7 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 			"-C", "PREROUTING",
 			"-p", "tcp",
 			"-i", rtExVeth,
+			"-d", natGatewayIP,
 			"--dport", fmt.Sprintf("%d", rule.DestPort),
 			"-j", "DNAT",
 			"--to-destination", fmt.Sprintf("%s:%d", rule.ToDestAddress, rule.ToDestPort),
@@ -208,6 +262,7 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 				"-A", "PREROUTING",
 				"-p", "tcp",
 				"-i", rtExVeth,
+				"-d", natGatewayIP,
 				"--dport", fmt.Sprintf("%d", rule.DestPort),
 				"-j", "DNAT",
 				"--to-destination", fmt.Sprintf("%s:%d", rule.ToDestAddress, rule.ToDestPort),

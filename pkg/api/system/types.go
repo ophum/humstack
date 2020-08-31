@@ -193,16 +193,21 @@ type DNATRule struct {
 	ToDestPort    int32  `json:"toDestPort" yaml:"toDestPort"`
 }
 
+type VirtualRouterExternalIP struct {
+	IPv4Address             string `json:"ipv4Address" yaml:"ipv4Address"`
+	BindInternalIPv4Address string `json:"bindInternalIPv4Address" yaml:"bindInternalIPv4Address"`
+}
 type VirtualRouterNIC struct {
 	NetworkID   string `json:"networkID" yaml:"networkID"`
 	IPv4Address string `json:"ipv4Address" yaml:"ipv4Address"`
 }
 type VirtualRouterSpec struct {
-	ExternalGateway string             `json:"externalGateway" yaml:"externalGateway"`
-	ExternalIP      string             `json:"externalIP" yaml:"externalIP"`
-	NICs            []VirtualRouterNIC `json:"nics" yaml:"nics"`
-	NATRules        []NATRule          `json:"natRules" yaml:"natRules"`
-	DNATRules       []DNATRule         `json:"dnatRules" yaml:"dnatRules"`
+	ExternalGateway string                    `json:"externalGateway" yaml:"externalGateway"`
+	ExternalIPs     []VirtualRouterExternalIP `json:"externalIPs" yaml:"externalIPs"`
+	NATGatewayIP    string                    `json:"natGatewayIP" yaml:"natGatewayIP"`
+	NICs            []VirtualRouterNIC        `json:"nics" yaml:"nics"`
+	NATRules        []NATRule                 `json:"natRules" yaml:"natRules"`
+	DNATRules       []DNATRule                `json:"dnatRules" yaml:"dnatRules"`
 }
 
 type VirtualRouterState string

@@ -70,7 +70,13 @@ func TestVirtualRouterCreate(t *testing.T) {
 		},
 		Spec: system.VirtualRouterSpec{
 			ExternalGateway: "192.168.10.254",
-			ExternalIP:      "192.168.10.100/24",
+			ExternalIPs: []system.VirtualRouterExternalIP{
+				{
+					IPv4Address:             "192.168.10.101/24",
+					BindInternalIPv4Address: "10.0.0.1",
+				},
+			},
+			NATGatewayIP: "192.168.10.100/24",
 			NICs: []system.VirtualRouterNIC{
 				{
 					NetworkID:   net.ID,
@@ -86,7 +92,7 @@ func TestVirtualRouterCreate(t *testing.T) {
 			DNATRules: []system.DNATRule{
 				{
 					DestPort:      10022,
-					ToDestAddress: "10.0.0.1",
+					ToDestAddress: "10.0.0.2",
 					ToDestPort:    22,
 				},
 			},
