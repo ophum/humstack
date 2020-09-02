@@ -194,7 +194,7 @@ type DNATRule struct {
 }
 
 type VirtualRouterExternalIP struct {
-	IPv4Address             string `json:"ipv4Address" yaml:"ipv4Address"`
+	ExternalIPID            string `json:"externalIPID" yaml:"externalIPID"`
 	BindInternalIPv4Address string `json:"bindInternalIPv4Address" yaml:"bindInternalIPv4Address"`
 }
 type VirtualRouterNIC struct {

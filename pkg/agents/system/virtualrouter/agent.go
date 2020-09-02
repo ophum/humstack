@@ -134,18 +134,29 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 		})
 	}
 
-	for _, eip := range vr.Spec.ExternalIPs {
+	for _, e := range vr.Spec.ExternalIPs {
+		eip, err := a.client.CoreV0().ExternalIP().Get(e.ExternalIPID)
+		if err != nil {
+			return err
+		}
+
 		netnsExec(netnsName, []string{
-			"ip", "a", "add", eip.IPv4Address, "dev", rtExVeth,
+			"ip", "a",
+			"add",
+			fmt.Sprintf("%s/%d",
+				eip.Spec.ExternalIPv4Address,
+				eip.Spec.ExternalIPv4Prefix,
+			),
+			"dev", rtExVeth,
 		})
 
 		// iptables -t nat -A PREROUTING -d ${daddr} -j DNAT --to-destination ${DEST}
 		// iptables -t nat -A POSTROUTING -s ${saddr} -j SNAT --to-source ${daddr}
 
-		daddr := strings.Split(eip.IPv4Address, "/")[0]
+		daddr := eip.Spec.ExternalIPv4Address
 
-		natRule = append(natRule, fmt.Sprintf("-A PREROUTING -d %s -j DNAT --to-destination %s", daddr, eip.BindInternalIPv4Address))
-		natRule = append(natRule, fmt.Sprintf("-A POSTROUTING -s %s -j SNAT --to-source %s", eip.BindInternalIPv4Address, daddr))
+		natRule = append(natRule, fmt.Sprintf("-A PREROUTING -d %s -j DNAT --to-destination %s", daddr, e.BindInternalIPv4Address))
+		natRule = append(natRule, fmt.Sprintf("-A POSTROUTING -s %s -j SNAT --to-source %s", e.BindInternalIPv4Address, daddr))
 	}
 
 	natGatewayIP := strings.Split(vr.Spec.NATGatewayIP, "/")[0]
