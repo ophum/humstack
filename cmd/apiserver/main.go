@@ -4,6 +4,10 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ophum/humstack/pkg/api/core/externalip"
+	eipv0 "github.com/ophum/humstack/pkg/api/core/externalip/v0"
+	"github.com/ophum/humstack/pkg/api/core/externalippool"
+	eippoolv0 "github.com/ophum/humstack/pkg/api/core/externalippool/v0"
 	"github.com/ophum/humstack/pkg/api/core/group"
 	grv0 "github.com/ophum/humstack/pkg/api/core/group/v0"
 	"github.com/ophum/humstack/pkg/api/core/namespace"
@@ -44,6 +48,8 @@ func main() {
 	bsh := bsv0.NewBlockStorageHandler(s)
 	vmh := vmv0.NewVirtualMachineHandler(s)
 	vrh := vrv0.NewVirtualRouterHandler(s)
+	eippoolh := eippoolv0.NewExternalIPPoolHandler(s)
+	eiph := eipv0.NewExternalIPHandler(s)
 	nodeh := nodev0.NewNodeHandler(s)
 
 	v0 := r.Group("/api/v0")
@@ -54,6 +60,8 @@ func main() {
 		bsi := blockstorage.NewBlockStorageHandler(v0, bsh)
 		vmi := virtualmachine.NewVirtualMachineHandler(v0, vmh)
 		vri := virtualrouter.NewVirtualRouterHandler(v0, vrh)
+		eippooli := externalippool.NewExternalIPPoolHandler(v0, eippoolh)
+		eipi := externalip.NewExternalIPHandler(v0, eiph)
 		nodei := node.NewNodeHandler(v0, nodeh)
 
 		gri.RegisterHandlers()
@@ -62,6 +70,8 @@ func main() {
 		bsi.RegisterHandlers()
 		vmi.RegisterHandlers()
 		vri.RegisterHandlers()
+		eippooli.RegisterHandlers()
+		eipi.RegisterHandlers()
 		nodei.RegisterHandlers()
 	}
 

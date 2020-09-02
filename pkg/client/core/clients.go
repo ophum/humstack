@@ -1,6 +1,8 @@
 package core
 
 import (
+	eipv0 "github.com/ophum/humstack/pkg/client/core/externalip/v0"
+	eippoolv0 "github.com/ophum/humstack/pkg/client/core/externalippool/v0"
 	grv0 "github.com/ophum/humstack/pkg/client/core/group/v0"
 	nsv0 "github.com/ophum/humstack/pkg/client/core/namespace/v0"
 )
@@ -11,6 +13,8 @@ type CoreV0Clients struct {
 
 	namespaceClient *nsv0.NamespaceClient
 	groupClient     *grv0.GroupClient
+	eippoolClient   *eippoolv0.ExternalIPPoolClient
+	eipClient       *eipv0.ExternalIPClient
 }
 
 func NewCoreV0Clients(apiServerAddress string, apiServerPort int32) *CoreV0Clients {
@@ -20,6 +24,8 @@ func NewCoreV0Clients(apiServerAddress string, apiServerPort int32) *CoreV0Clien
 
 		namespaceClient: nsv0.NewNamespaceClient("http", apiServerAddress, apiServerPort),
 		groupClient:     grv0.NewGroupClient("http", apiServerAddress, apiServerPort),
+		eipClient:       eipv0.NewExternalIPClient("http", apiServerAddress, apiServerPort),
+		eippoolClient:   eippoolv0.NewExternalIPPoolClient("http", apiServerAddress, apiServerPort),
 	}
 }
 
@@ -29,4 +35,12 @@ func (c *CoreV0Clients) Namespace() *nsv0.NamespaceClient {
 
 func (c *CoreV0Clients) Group() *grv0.GroupClient {
 	return c.groupClient
+}
+
+func (c *CoreV0Clients) ExternalIPPool() *eippoolv0.ExternalIPPoolClient {
+	return c.eippoolClient
+}
+
+func (c *CoreV0Clients) ExternalIP() *eipv0.ExternalIPClient {
+	return c.eipClient
 }
