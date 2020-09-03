@@ -42,9 +42,9 @@ func TestExternalIPCreate(t *testing.T) {
 			Name: "TEST0",
 		},
 		Spec: core.ExternalIPSpec{
-			ExternalIPPoolID:    pool.ID,
-			ExternalIPv4Address: "192.168.10.1",
-			ExternalIPv4Prefix:  24,
+			PoolID:      pool.ID,
+			IPv4Address: "192.168.10.1",
+			IPv4Prefix:  24,
 		},
 	})
 	if err != nil {

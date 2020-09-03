@@ -8,6 +8,8 @@ import (
 	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
+	eipv0 "github.com/ophum/humstack/pkg/client/core/externalip/v0"
+	eippoolv0 "github.com/ophum/humstack/pkg/client/core/externalippool/v0"
 	grv0 "github.com/ophum/humstack/pkg/client/core/group/v0"
 	nsv0 "github.com/ophum/humstack/pkg/client/core/namespace/v0"
 	netv0 "github.com/ophum/humstack/pkg/client/system/network/v0"
@@ -57,6 +59,32 @@ func TestVirtualRouterCreate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	eippoolClient := eippoolv0.NewExternalIPPoolClient("http", "localhost", 8080)
+	eippool, err := eippoolClient.Create(&core.ExternalIPPool{
+		Meta: meta.Meta{
+			ID:   "testeippool",
+			Name: "test eippool",
+		},
+		Spec: core.ExternalIPPoolSpec{
+			IPv4CIDR:       "192.168.10.0/24",
+			IPv6CIDR:       "fc00::/64",
+			BridgeName:     "exBr",
+			DefaultGateway: "192.168.10.254",
+		},
+	})
+	eipClient := eipv0.NewExternalIPClient("http", "localhost", 8080)
+	eip, err := eipClient.Create(&core.ExternalIP{
+		Meta: meta.Meta{
+			ID:   "eip",
+			Name: "eip",
+		},
+		Spec: core.ExternalIPSpec{
+			PoolID:      eippool.ID,
+			IPv4Address: "192.168.10.1",
+			IPv4Prefix:  24,
+		},
+	})
+
 	client := NewVirtualRouterClient("http", "localhost", 8080)
 	vr, err := client.Create(&system.VirtualRouter{
 		Meta: meta.Meta{
@@ -72,7 +100,7 @@ func TestVirtualRouterCreate(t *testing.T) {
 			ExternalGateway: "192.168.10.254",
 			ExternalIPs: []system.VirtualRouterExternalIP{
 				{
-					IPv4Address:             "192.168.10.101/24",
+					ExternalIPID:            eip.ID,
 					BindInternalIPv4Address: "10.0.0.1",
 				},
 			},

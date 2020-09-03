@@ -60,12 +60,12 @@ type ExternalIPPool struct {
 }
 
 type ExternalIPSpec struct {
-	ExternalIPPoolID string `json:"externalIPPoolID" yaml:"externalIPPoolID"`
+	PoolID string `json:"poolID" yaml:"poolID"`
 
-	ExternalIPv4Address string `json:"externalIPv4Address" yaml:"externalIPv4Address"`
-	ExternalIPv4Prefix  int32  `json:"externalIPv4Prefix" yaml:"externalIPv4Prefix"`
-	ExternalIPv6Address string `json:"externalIPv6Address" yaml:"externalIPv6Address"`
-	ExternalIPv6Prefix  int32  `json:"externalIPv6Prefix" yaml:"externalIPv6Prefix"`
+	IPv4Address string `json:"ipv4Address" yaml:"ipv4Address"`
+	IPv4Prefix  int32  `json:"ipv4Prefix" yaml:"ipv4Prefix"`
+	IPv6Address string `json:"ipv6Address" yaml:"ipv6Address"`
+	IPv6Prefix  int32  `json:"ipv6Prefix" yaml:"ipv6Prefix"`
 }
 type ExternalIP struct {
 	meta.Meta `json:"meta" yaml:"meta"`

@@ -144,8 +144,8 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 			"ip", "a",
 			"add",
 			fmt.Sprintf("%s/%d",
-				eip.Spec.ExternalIPv4Address,
-				eip.Spec.ExternalIPv4Prefix,
+				eip.Spec.IPv4Address,
+				eip.Spec.IPv4Prefix,
 			),
 			"dev", rtExVeth,
 		})
@@ -153,7 +153,7 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 		// iptables -t nat -A PREROUTING -d ${daddr} -j DNAT --to-destination ${DEST}
 		// iptables -t nat -A POSTROUTING -s ${saddr} -j SNAT --to-source ${daddr}
 
-		daddr := eip.Spec.ExternalIPv4Address
+		daddr := eip.Spec.IPv4Address
 
 		natRule = append(natRule, fmt.Sprintf("-A PREROUTING -d %s -j DNAT --to-destination %s", daddr, e.BindInternalIPv4Address))
 		natRule = append(natRule, fmt.Sprintf("-A POSTROUTING -s %s -j SNAT --to-source %s", e.BindInternalIPv4Address, daddr))
