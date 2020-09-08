@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"path/filepath"
 	"time"
 
 	"github.com/ophum/humstack/pkg/api/system"
@@ -68,7 +69,25 @@ func (a *NetworkAgent) Run() {
 								attachedInterfacesToNet[nic.NetworkID] = map[string]system.VirtualMachineNIC{}
 							}
 
-							attachedInterfacesToNet[nic.NetworkID][vm.ID] = *nic
+							attachedInterfacesToNet[nic.NetworkID][filepath.Join("virtualmachinev0", vm.ID)] = *nic
+						}
+					}
+
+					vrList, err := a.client.SystemV0().VirtualRouter().List(group.ID, ns.ID)
+					for _, vr := range vrList {
+						if vr.Status.State != system.VirtualRouterStateRunning {
+							continue
+						}
+
+						for _, nic := range vr.Spec.NICs {
+							if attachedInterfacesToNet[nic.NetworkID] == nil {
+								attachedInterfacesToNet[nic.NetworkID] = map[string]system.VirtualMachineNIC{}
+							}
+
+							attachedInterfacesToNet[nic.NetworkID][filepath.Join("virtualrouterv0", vr.ID)] = system.VirtualMachineNIC{
+								NetworkID:   nic.NetworkID,
+								IPv4Address: nic.IPv4Address,
+							}
 						}
 					}
 
