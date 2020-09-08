@@ -53,6 +53,25 @@ func (a *NetworkAgent) Run() {
 				}
 
 				for _, ns := range nsList {
+					vmList, err := a.client.SystemV0().VirtualMachine().List(group.ID, ns.ID)
+					if err != nil {
+						continue
+					}
+					attachedInterfacesToNet := map[string]map[string]system.VirtualMachineNIC{}
+					for _, vm := range vmList {
+						if vm.Status.State != system.VirtualMachineStateRunning {
+							continue
+						}
+
+						for _, nic := range vm.Spec.NICs {
+							if attachedInterfacesToNet[nic.NetworkID] == nil {
+								attachedInterfacesToNet[nic.NetworkID] = map[string]system.VirtualMachineNIC{}
+							}
+
+							attachedInterfacesToNet[nic.NetworkID][vm.ID] = *nic
+						}
+					}
+
 					netList, err := a.client.SystemV0().Network().List(group.ID, ns.ID)
 					if err != nil {
 						continue
@@ -60,6 +79,7 @@ func (a *NetworkAgent) Run() {
 
 					for _, net := range netList {
 						oldHash := net.ResourceHash
+						net.Status.AttachedInterfaces = attachedInterfacesToNet[net.ID]
 						switch net.Annotations[NetworkV0AnnotationNetworkType] {
 						case NetworkV0NetworkTypeBridge:
 							err = syncBridgeNetwork(net)

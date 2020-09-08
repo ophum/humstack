@@ -14,10 +14,24 @@ type NetworkSpec struct {
 	IPv6CIDR string `json:"ipv6CIDR" yaml:"ipv6CIDR"`
 }
 
+type NetworkState string
+
+const (
+	NetworkStatePending   NetworkState = "Pending"
+	NetworkStateAvailable NetworkState = "Available"
+	NetworkStateDeleting  NetworkState = "Deleting"
+)
+
+type NetworkStatus struct {
+	State              NetworkState                 `json:"state" yaml:"state"`
+	AttachedInterfaces map[string]VirtualMachineNIC `json:"attachedInterfaces" yaml:"attachedInterfaces"`
+}
+
 type Network struct {
 	meta.Meta `json:"meta" yaml:"meta"`
 
-	Spec NetworkSpec `json:"spec" yaml:"spec"`
+	Spec   NetworkSpec   `json:"spec" yaml:"spec"`
+	Status NetworkStatus `json:"status" yaml:"status"`
 }
 
 type ImageTag struct {
