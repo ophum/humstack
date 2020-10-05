@@ -1,6 +1,8 @@
 package virtualrouter
 
 import (
+	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -13,6 +15,7 @@ import (
 	"github.com/ophum/humstack/pkg/agents/system/network/utils"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
+	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
 )
 
@@ -199,7 +202,7 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 		err = netnsExec(netnsName, []string{
 			"ip", "route", "add", "default", "via", vr.Spec.ExternalGateway,
 		})
-		log.Println(err)
+		log.Println(errors.Wrap(err, "adding default route in netns"))
 	}
 
 	for _, rule := range vr.Spec.DNATRules {
@@ -214,6 +217,7 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 
 	natRule = append(natRule, "COMMIT")
 	natFile := strings.Join(natRule, "\n")
+	log.Println(natFile)
 	cmd := exec.Command("ip", "netns", "exec", netnsName, "iptables-restore")
 	w, _ := cmd.StdinPipe()
 	_, err := io.WriteString(w, natFile+"\n")
@@ -223,13 +227,16 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 		return err
 	}
 
+	log.Println("exec iptables-restore in netns")
 	out, err := cmd.CombinedOutput()
 	log.Println(string(out))
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	return nil
+
+	vr.Status.State = system.VirtualRouterStateRunning
+	return setHash(vr)
 }
 
 func netnsIsExists(name string) bool {
@@ -275,4 +282,16 @@ func netnsExec(name string, command []string) error {
 	log.Println(command)
 	cmd := exec.Command("ip", command...)
 	return cmd.Run()
+}
+
+func setHash(vr *system.VirtualRouter) error {
+	vr.ResourceHash = ""
+	resourceJSON, err := json.Marshal(vr)
+	if err != nil {
+		return err
+	}
+
+	hash := md5.Sum(resourceJSON)
+	vr.ResourceHash = fmt.Sprintf("%x", hash)
+	return nil
 }
