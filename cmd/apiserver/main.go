@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -28,6 +30,17 @@ import (
 
 	"github.com/gin-contrib/cors"
 )
+
+var (
+	listenAddress string
+	listenPort    int64
+)
+
+func init() {
+	flag.StringVar(&listenAddress, "listen-address", "localhost", "listen address")
+	flag.Int64Var(&listenPort, "listen-port", 8080, "listen port")
+	flag.Parse()
+}
 
 func main() {
 	r := gin.Default()
@@ -75,7 +88,7 @@ func main() {
 		nodei.RegisterHandlers()
 	}
 
-	if err := r.Run(":8080"); err != nil {
+	if err := r.Run(fmt.Sprintf("%s:%d", listenAddress, listenPort)); err != nil {
 		log.Fatal(err)
 	}
 

@@ -17,7 +17,8 @@ import (
 )
 
 type Config struct {
-	apiServerAddress    string `yaml:"apiServerAddress"`
+	ApiServerAddress    string `yaml:"apiServerAddress"`
+	ApiServerPort       int32  `yaml:"apiServerPort"`
 	LimitMemory         string `yaml:"limitMemory"`
 	LimitVcpus          string `yaml:"limitVcpus"`
 	BlockStorageDirPath string `yaml:"blockStorageDirPath"`
@@ -51,7 +52,7 @@ func init() {
 }
 
 func main() {
-	client := client.NewClients(config.apiServerAddress, 8080)
+	client := client.NewClients(config.ApiServerAddress, config.ApiServerPort)
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Fatal(err)
