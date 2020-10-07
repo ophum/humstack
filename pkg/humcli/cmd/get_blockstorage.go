@@ -33,8 +33,13 @@ var getBlockStorageCmd = &cobra.Command{
 			"NodeName",
 			"Type",
 			"FromType",
+			"Status",
 		})
 		for _, bs := range bsList {
+			state := string(bs.Status.State)
+			if bs.DeleteState != "" {
+				state = string(bs.DeleteState)
+			}
 			table.Append([]string{
 				bs.ID,
 				bs.Name,
@@ -43,6 +48,7 @@ var getBlockStorageCmd = &cobra.Command{
 				bs.Annotations[agentbsv0.BlockStorageV0AnnotationNodeName],
 				bs.Annotations[agentbsv0.BlockStorageV0AnnotationType],
 				string(bs.Spec.From.Type),
+				state,
 			})
 		}
 
