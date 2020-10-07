@@ -7,8 +7,11 @@ const (
 	APITypeNetworkV0        APIType = "systemv0/network"
 	APITypeBlockStorageV0   APIType = "systemv0/blockstorage"
 	APITypeVirtualMachineV0 APIType = "systemv0/virtualmachine"
+	APITypeVirtualRouterV0  APIType = "systemv0/virtualrouter"
 	APITypeNamespaceV0      APIType = "corev0/namespace"
 	APITypeGroupV0          APIType = "corev0/group"
+	APITypeExternalIPPoolV0 APIType = "corev0/externalippool"
+	APITypeExternalIPV0     APIType = "corev0/externalip"
 )
 
 type ResourceType string
@@ -31,4 +34,10 @@ type Meta struct {
 	ResourceHash string            `json:"resourceHash" yaml:"resourceHash"`
 	DeleteState  DeleteState       `json:"deleteState" yaml:"deleteState"`
 	APIType      APIType           `json:"apiType" yaml:"apiType"`
+}
+
+type Object struct {
+	Meta   Meta `json:"meta" yaml:"meta"`
+	Spec   interface{}
+	Status interface{}
 }

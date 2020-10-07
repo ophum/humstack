@@ -102,7 +102,7 @@ func (c *BlockStorageClient) Create(blockstorage *system.BlockStorage) (*system.
 	}
 
 	if res.IsError() {
-		return nil, fmt.Errorf("error")
+		return nil, fmt.Errorf("error: %+v", bsRes)
 	}
 
 	return &bsRes.Data.BlockStorage, nil
