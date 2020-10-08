@@ -16,6 +16,9 @@ func init() {
 
 var getNamespaceCmd = &cobra.Command{
 	Use: "namespace",
+	Aliases: []string{
+		"ns",
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		clients := client.NewClients("localhost", 8080)
 		nsList, err := clients.CoreV0().Namespace().List(group)

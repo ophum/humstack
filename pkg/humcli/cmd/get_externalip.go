@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -11,36 +12,34 @@ import (
 )
 
 func init() {
-	getCmd.AddCommand(getNetworkCmd)
+	getCmd.AddCommand(getExternalIPCmd)
 }
 
-var getNetworkCmd = &cobra.Command{
-	Use: "network",
+var getExternalIPCmd = &cobra.Command{
+	Use: "externalip",
 	Aliases: []string{
-		"net",
+		"eip",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		clients := client.NewClients("localhost", 8080)
-		netList, err := clients.SystemV0().Network().List(group, namespace)
+		eipList, err := clients.CoreV0().ExternalIP().List()
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{
-			"ID",
 			"Name",
-			"IPv4CIDR",
-			"IPv6CIDR",
-			"Network ID",
+			"Pool ID",
+			"IPv4",
+			"IPv6",
 		})
-		for _, n := range netList {
+		for _, eip := range eipList {
 			table.Append([]string{
-				n.ID,
-				n.Name,
-				n.Spec.IPv4CIDR,
-				n.Spec.IPv6CIDR,
-				n.Spec.ID,
+				eip.Name,
+				eip.Spec.PoolID,
+				fmt.Sprintf("%s/%d", eip.Spec.IPv4Address, eip.Spec.IPv4Prefix),
+				fmt.Sprintf("%s/%d", eip.Spec.IPv6Address, eip.Spec.IPv6Prefix),
 			})
 		}
 
