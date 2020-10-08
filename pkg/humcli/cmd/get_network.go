@@ -20,7 +20,7 @@ var getNetworkCmd = &cobra.Command{
 		"net",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		clients := client.NewClients("localhost", 8080)
+		clients := client.NewClients(apiServerAddress, apiServerPort)
 		netList, err := clients.SystemV0().Network().List(group, namespace)
 		if err != nil {
 			log.Fatal(err)

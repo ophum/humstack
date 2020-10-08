@@ -13,8 +13,10 @@ var (
 		Use:   "humstack",
 		Short: "humstack cli",
 	}
-	group     string
-	namespace string
+	apiServerAddress string
+	apiServerPort    int32
+	group            string
+	namespace        string
 )
 
 func Execute() error {
@@ -27,6 +29,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file")
 	rootCmd.PersistentFlags().StringVar(&group, "g", "default", "group id")
 	rootCmd.PersistentFlags().StringVar(&namespace, "n", "default", "namespace id")
+	rootCmd.PersistentFlags().StringVar(&apiServerAddress, "api-server-address", "localhost", "apiserver address")
+	rootCmd.PersistentFlags().Int32Var(&apiServerPort, "api-server-port", 8080, "apiserver Port")
 
 }
 

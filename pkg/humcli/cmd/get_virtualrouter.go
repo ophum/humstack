@@ -24,7 +24,7 @@ var getVirtualRouterCmd = &cobra.Command{
 		"vrouter",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		clients := client.NewClients("localhost", 8080)
+		clients := client.NewClients(apiServerAddress, apiServerPort)
 		vrList, err := clients.SystemV0().VirtualRouter().List(group, namespace)
 		if err != nil {
 			log.Fatal(err)

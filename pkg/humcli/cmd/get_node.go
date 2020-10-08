@@ -17,7 +17,7 @@ func init() {
 var getNodeCmd = &cobra.Command{
 	Use: "node",
 	Run: func(cmd *cobra.Command, args []string) {
-		clients := client.NewClients("localhost", 8080)
+		clients := client.NewClients(apiServerAddress, apiServerPort)
 		nodeList, err := clients.SystemV0().Node().List()
 		if err != nil {
 			log.Fatal(err)

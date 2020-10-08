@@ -22,7 +22,7 @@ func init() {
 var updateCmd = &cobra.Command{
 	Use: "update",
 	Run: func(cmd *cobra.Command, args []string) {
-		clients := client.NewClients("localhost", 8080)
+		clients := client.NewClients(apiServerAddress, apiServerPort)
 		for _, file := range args {
 			f, err := os.Open(file)
 			if err != nil {

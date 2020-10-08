@@ -20,7 +20,7 @@ var getExternalIPPoolCmd = &cobra.Command{
 		"eippool",
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		clients := client.NewClients("localhost", 8080)
+		clients := client.NewClients(apiServerAddress, apiServerPort)
 		eippoolList, err := clients.CoreV0().ExternalIPPool().List()
 		if err != nil {
 			log.Fatal(err)
