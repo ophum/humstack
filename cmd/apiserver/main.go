@@ -24,6 +24,8 @@ import (
 	vmv0 "github.com/ophum/humstack/pkg/api/system/virtualmachine/v0"
 	"github.com/ophum/humstack/pkg/api/system/virtualrouter"
 	vrv0 "github.com/ophum/humstack/pkg/api/system/virtualrouter/v0"
+	"github.com/ophum/humstack/pkg/api/watch"
+	watchv0 "github.com/ophum/humstack/pkg/api/watch/v0"
 
 	//store "github.com/ophum/humstack/pkg/store/memory"
 	store "github.com/ophum/humstack/pkg/store/leveldb"
@@ -48,12 +50,23 @@ func main() {
 	corsConfig.AllowOrigins = []string{"*"}
 	r.Use(cors.New(corsConfig))
 
+	notifier := make(chan string, 100)
 	//s := store.NewMemoryStore()
-	s, err := store.NewLevelDBStore("./database")
+	s, err := store.NewLevelDBStore("./database", notifier)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer s.Close()
+
+	// bloadcasting
+	notifiers := map[string](chan string){}
+	go func() {
+		for n := range notifier {
+			for _, nn := range notifiers {
+				nn <- n
+			}
+		}
+	}()
 
 	grh := grv0.NewGroupHandler(s)
 	nsh := nsv0.NewNamespaceHandler(s)
@@ -64,6 +77,7 @@ func main() {
 	eippoolh := eippoolv0.NewExternalIPPoolHandler(s)
 	eiph := eipv0.NewExternalIPHandler(s)
 	nodeh := nodev0.NewNodeHandler(s)
+	watchh := watchv0.NewWatchHandler(notifiers)
 
 	v0 := r.Group("/api/v0")
 	{
@@ -76,6 +90,7 @@ func main() {
 		eippooli := externalippool.NewExternalIPPoolHandler(v0, eippoolh)
 		eipi := externalip.NewExternalIPHandler(v0, eiph)
 		nodei := node.NewNodeHandler(v0, nodeh)
+		watchi := watch.NewWatchHandler(v0, watchh)
 
 		gri.RegisterHandlers()
 		nsi.RegisterHandlers()
@@ -86,6 +101,7 @@ func main() {
 		eippooli.RegisterHandlers()
 		eipi.RegisterHandlers()
 		nodei.RegisterHandlers()
+		watchi.RegisterHandlers()
 	}
 
 	if err := r.Run(fmt.Sprintf("%s:%d", listenAddress, listenPort)); err != nil {

@@ -12,12 +12,19 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
+type NoticeData struct {
+	Key    string `json:"key"`
+	Before string `json:"before"`
+	After  string `json:"after"`
+}
+
 type LevelDBStore struct {
 	db        *leveldb.DB
 	lockTable map[string]*sync.RWMutex
+	notifier  chan string
 }
 
-func NewLevelDBStore(dirPath string) (*LevelDBStore, error) {
+func NewLevelDBStore(dirPath string, notifier chan string) (*LevelDBStore, error) {
 	db, err := leveldb.OpenFile(filepath.Join(dirPath, "database.leveldb"), nil)
 	if err != nil {
 		return nil, err
@@ -26,6 +33,7 @@ func NewLevelDBStore(dirPath string) (*LevelDBStore, error) {
 	return &LevelDBStore{
 		db:        db,
 		lockTable: map[string]*sync.RWMutex{},
+		notifier:  notifier,
 	}, nil
 }
 
@@ -72,6 +80,13 @@ func (s *LevelDBStore) Get(key string, v interface{}) error {
 }
 
 func (s *LevelDBStore) Put(key string, data interface{}) {
+	before, err := s.db.Get([]byte(key), nil)
+	if err != nil {
+		if err != leveldbErrors.ErrNotFound {
+			return
+		}
+	}
+
 	dataJSON, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return
@@ -84,16 +99,43 @@ func (s *LevelDBStore) Put(key string, data interface{}) {
 
 	fmt.Println("=============== PUT  ==================")
 	s.printDB()
+
+	noticeData := NoticeData{
+		Key:    key,
+		Before: string(before),
+		After:  string(dataJSON),
+	}
+
+	noticeJSON, err := json.Marshal(noticeData)
+	if err != nil {
+		return
+	}
+	s.notifier <- string(noticeJSON)
 }
 
 func (s *LevelDBStore) Delete(key string) {
-	err := s.db.Delete([]byte(key), nil)
+	before, err := s.db.Get([]byte(key), nil)
+	if err != nil {
+		if err != leveldbErrors.ErrNotFound {
+			return
+		}
+	}
+
+	err = s.db.Delete([]byte(key), nil)
 	if err != nil {
 		return
 	}
 
 	fmt.Println("============== DELETE ================")
 	s.printDB()
+
+	noticeJSON, err := json.Marshal(NoticeData{
+		Key:    key,
+		Before: string(before),
+		After:  "",
+	})
+
+	s.notifier <- string(noticeJSON)
 }
 
 func (s *LevelDBStore) Lock(key string) {
