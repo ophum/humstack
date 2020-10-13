@@ -11,14 +11,17 @@ import (
 )
 
 func init() {
-	getCmd.AddCommand(getNodeCmd)
+	getCmd.AddCommand(getExternalIPPoolCmd)
 }
 
-var getNodeCmd = &cobra.Command{
-	Use: "node",
+var getExternalIPPoolCmd = &cobra.Command{
+	Use: "externalippool",
+	Aliases: []string{
+		"eippool",
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		clients := client.NewClients(apiServerAddress, apiServerPort)
-		nodeList, err := clients.SystemV0().Node().List()
+		eippoolList, err := clients.CoreV0().ExternalIPPool().List()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -26,14 +29,16 @@ var getNodeCmd = &cobra.Command{
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{
 			"Name",
-			"LimitVcpus",
-			"LimitMemory",
+			"Bridge",
+			"IPv4 CIDR",
+			"IPv6 CIDR",
 		})
-		for _, n := range nodeList {
+		for _, eippool := range eippoolList {
 			table.Append([]string{
-				n.Name,
-				n.Spec.LimitVcpus,
-				n.Spec.LimitMemory,
+				eippool.Name,
+				eippool.Spec.BridgeName,
+				eippool.Spec.IPv4CIDR,
+				eippool.Spec.IPv6CIDR,
 			})
 		}
 

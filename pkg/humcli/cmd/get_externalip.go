@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -11,14 +12,17 @@ import (
 )
 
 func init() {
-	getCmd.AddCommand(getNodeCmd)
+	getCmd.AddCommand(getExternalIPCmd)
 }
 
-var getNodeCmd = &cobra.Command{
-	Use: "node",
+var getExternalIPCmd = &cobra.Command{
+	Use: "externalip",
+	Aliases: []string{
+		"eip",
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		clients := client.NewClients(apiServerAddress, apiServerPort)
-		nodeList, err := clients.SystemV0().Node().List()
+		eipList, err := clients.CoreV0().ExternalIP().List()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -26,14 +30,16 @@ var getNodeCmd = &cobra.Command{
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{
 			"Name",
-			"LimitVcpus",
-			"LimitMemory",
+			"Pool ID",
+			"IPv4",
+			"IPv6",
 		})
-		for _, n := range nodeList {
+		for _, eip := range eipList {
 			table.Append([]string{
-				n.Name,
-				n.Spec.LimitVcpus,
-				n.Spec.LimitMemory,
+				eip.Name,
+				eip.Spec.PoolID,
+				fmt.Sprintf("%s/%d", eip.Spec.IPv4Address, eip.Spec.IPv4Prefix),
+				fmt.Sprintf("%s/%d", eip.Spec.IPv6Address, eip.Spec.IPv6Prefix),
 			})
 		}
 

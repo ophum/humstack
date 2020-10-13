@@ -135,7 +135,7 @@ type VirtualMachineSpec struct {
 
 	NICs []*VirtualMachineNIC `json:"nics" yaml:"nics"`
 
-	LoginUsers []*VirtualMachineLoginUser `json:"loginUsers"`
+	LoginUsers []*VirtualMachineLoginUser `json:"loginUsers" yaml:"loginUsers"`
 
 	ActionState VirtualMachineActionState `json:"actionState" yaml:"actionState"`
 }

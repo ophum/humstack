@@ -18,8 +18,12 @@ func init() {
 
 var getVirtualMachineCmd = &cobra.Command{
 	Use: "virtualmachine",
+	Aliases: []string{
+		"vm",
+		"vmachine",
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		clients := client.NewClients("localhost", 8080)
+		clients := client.NewClients(apiServerAddress, apiServerPort)
 		vmList, err := clients.SystemV0().VirtualMachine().List(group, namespace)
 		if err != nil {
 			log.Fatal(err)
@@ -30,9 +34,8 @@ var getVirtualMachineCmd = &cobra.Command{
 			"ID",
 			"Name",
 			"Status(Action=>State)",
-			"Vcpus(Limit/Req)",
-			"Memory(Limit/Req)",
-			"NodeName",
+			"Vcpus(Limit/Req)\nMemory(Limit/Req)",
+			"Node",
 			"UUID",
 		})
 		for _, vm := range vmList {
@@ -40,10 +43,9 @@ var getVirtualMachineCmd = &cobra.Command{
 				vm.ID,
 				vm.Name,
 				fmt.Sprintf("%s => %s", vm.Spec.ActionState, vm.Status.State),
-				fmt.Sprintf("%s/%s",
+				fmt.Sprintf("%s/%s\n%s/%s",
 					vm.Spec.LimitVcpus,
-					vm.Spec.RequestVcpus),
-				fmt.Sprintf("%s/%s",
+					vm.Spec.RequestVcpus,
 					vm.Spec.LimitMemory,
 					vm.Spec.RequestMemory),
 				vm.Annotations[agentvmv0.VirtualMachineV0AnnotationNodeName],

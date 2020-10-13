@@ -16,11 +16,11 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(createCmd)
+	rootCmd.AddCommand(updateCmd)
 }
 
-var createCmd = &cobra.Command{
-	Use: "create",
+var updateCmd = &cobra.Command{
+	Use: "update",
 	Run: func(cmd *cobra.Command, args []string) {
 		clients := client.NewClients(apiServerAddress, apiServerPort)
 		for _, file := range args {
@@ -34,7 +34,7 @@ var createCmd = &cobra.Command{
 
 			var item meta.Object
 			for decode.Decode(&item) == nil {
-				fmt.Printf("------ CREATE %s %s %s %s ------\n", item.Meta.APIType, item.Meta.Group, item.Meta.Namespace, item.Meta.ID)
+				fmt.Printf("------ UPDATE %s %s %s %s ------\n", item.Meta.APIType, item.Meta.Group, item.Meta.Namespace, item.Meta.ID)
 
 				// よくない実装だと思う...
 				r, w := io.Pipe()
@@ -53,7 +53,7 @@ var createCmd = &cobra.Command{
 						log.Fatal(errors.Wrap(err, "decode").Error())
 					}
 
-					gr, err = clients.CoreV0().Group().Create(gr)
+					gr, err = clients.CoreV0().Group().Update(gr)
 					if err != nil {
 						log.Fatal(errors.Wrap(err, "create").Error())
 					}
@@ -69,7 +69,7 @@ var createCmd = &cobra.Command{
 						log.Fatal(errors.Wrap(err, "decode").Error())
 					}
 
-					ns, err = clients.CoreV0().Namespace().Create(ns)
+					ns, err = clients.CoreV0().Namespace().Update(ns)
 					if err != nil {
 						log.Fatal(errors.Wrap(err, "create").Error())
 					}
@@ -87,7 +87,7 @@ var createCmd = &cobra.Command{
 						log.Fatal(err)
 					}
 
-					eippool, err = clients.CoreV0().ExternalIPPool().Create(eippool)
+					eippool, err = clients.CoreV0().ExternalIPPool().Update(eippool)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -105,7 +105,7 @@ var createCmd = &cobra.Command{
 						log.Fatal(err)
 					}
 
-					eip, err = clients.CoreV0().ExternalIP().Create(eip)
+					eip, err = clients.CoreV0().ExternalIP().Update(eip)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -123,7 +123,7 @@ var createCmd = &cobra.Command{
 						log.Fatal(err)
 					}
 
-					net, err = clients.SystemV0().Network().Create(net)
+					net, err = clients.SystemV0().Network().Update(net)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -142,7 +142,7 @@ var createCmd = &cobra.Command{
 					}
 
 					log.Println(bs)
-					bs, err = clients.SystemV0().BlockStorage().Create(bs)
+					bs, err = clients.SystemV0().BlockStorage().Update(bs)
 					if err != nil {
 						log.Fatal(err.Error())
 					}
@@ -160,7 +160,7 @@ var createCmd = &cobra.Command{
 						log.Fatal(err)
 					}
 
-					vm, err = clients.SystemV0().VirtualMachine().Create(vm)
+					vm, err = clients.SystemV0().VirtualMachine().Update(vm)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -178,7 +178,7 @@ var createCmd = &cobra.Command{
 						log.Fatal(err)
 					}
 
-					vr, err = clients.SystemV0().VirtualRouter().Create(vr)
+					vr, err = clients.SystemV0().VirtualRouter().Update(vr)
 					if err != nil {
 						log.Fatal(err)
 					}
