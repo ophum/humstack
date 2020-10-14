@@ -97,6 +97,7 @@ func (h *VirtualRouterHandler) Create(ctx *gin.Context) {
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
+	request.APIType = meta.APITypeVirtualRouterV0
 	h.store.Put(key, request)
 
 	meta.ResponseJSON(ctx, http.StatusCreated, nil, gin.H{

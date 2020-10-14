@@ -3,7 +3,6 @@ package v0
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -37,6 +36,8 @@ func (h *WatchHandler) Watch(ctx *gin.Context) {
 	ctx.Header("Connection", "keep-alive")
 	ctx.Header("Access-Control-Allow-Origin", "*")
 
+	apiType := ctx.DefaultQuery("apiType", "")
+
 	w := ctx.Writer
 	go func() {
 
@@ -44,11 +45,12 @@ func (h *WatchHandler) Watch(ctx *gin.Context) {
 			noticeData := leveldb.NoticeData{}
 			json.Unmarshal([]byte(s), &noticeData)
 
-			log.Printf("=== %s ===", idString)
-			log.Println(s)
+			if apiType == "" || apiType == string(noticeData.APIType) {
 
-			w.Write([]byte(fmt.Sprintf("data: %s\n\n", s)))
-			w.Flush()
+				w.Write([]byte(fmt.Sprintf("data: %s\n\n", s)))
+				w.Flush()
+			}
+
 		}
 
 	}()

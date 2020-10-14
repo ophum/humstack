@@ -4,18 +4,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"path/filepath"
 	"sync"
 
+	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/syndtr/goleveldb/leveldb"
 	leveldbErrors "github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 type NoticeData struct {
-	Key    string `json:"key"`
-	Before string `json:"before"`
-	After  string `json:"after"`
+	Key     string       `json:"key"`
+	APIType meta.APIType `json:"apiType"`
+	Before  string       `json:"before"`
+	After   string       `json:"after"`
 }
 
 type LevelDBStore struct {
@@ -100,10 +103,21 @@ func (s *LevelDBStore) Put(key string, data interface{}) {
 	fmt.Println("=============== PUT  ==================")
 	s.printDB()
 
+	obj := meta.Object{}
+	if len(before) == 0 {
+		if err := json.Unmarshal(dataJSON, &obj); err != nil {
+			return
+		}
+	} else {
+		if err := json.Unmarshal(before, &obj); err != nil {
+			return
+		}
+	}
 	noticeData := NoticeData{
-		Key:    key,
-		Before: string(before),
-		After:  string(dataJSON),
+		Key:     key,
+		APIType: obj.Meta.APIType,
+		Before:  string(before),
+		After:   string(dataJSON),
 	}
 
 	noticeJSON, err := json.Marshal(noticeData)
@@ -120,9 +134,15 @@ func (s *LevelDBStore) Delete(key string) {
 			return
 		}
 	}
+	obj := meta.Object{}
+	if err := json.Unmarshal(before, &obj); err != nil {
+		log.Println(err.Error())
+		return
+	}
 
 	err = s.db.Delete([]byte(key), nil)
 	if err != nil {
+		log.Println(err.Error())
 		return
 	}
 
@@ -130,10 +150,15 @@ func (s *LevelDBStore) Delete(key string) {
 	s.printDB()
 
 	noticeJSON, err := json.Marshal(NoticeData{
-		Key:    key,
-		Before: string(before),
-		After:  "",
+		Key:     key,
+		APIType: obj.Meta.APIType,
+		Before:  string(before),
+		After:   "",
 	})
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
 
 	s.notifier <- string(noticeJSON)
 }

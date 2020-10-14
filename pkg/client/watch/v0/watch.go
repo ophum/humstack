@@ -20,7 +20,7 @@ type WatchClient struct {
 }
 
 const (
-	basePathFormat = "api/v0/watches"
+	basePathFormat = "api/v0/watches%s"
 )
 
 func NewWatchClient(scheme, apiServerAddress string, apiServerPort int32) *WatchClient {
@@ -36,22 +36,13 @@ func NewWatchClient(scheme, apiServerAddress string, apiServerPort int32) *Watch
 	}
 }
 
-func (c *WatchClient) Watch(f func(before interface{}, after interface{})) error {
+func (c *WatchClient) Watch(apiType string, f func(before interface{}, after interface{})) error {
 	log.Println("start")
-	client := sse.NewClient(c.getPath())
-	//resp, err := http.Get(c.getPath())
-	//resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath())
-	//if err != nil {
-	//	return err
-	//}
-	//r := resp.RawBody()
-	//r := resp.Body
+	client := sse.NewClient(c.getPath(apiType))
 
-	client.Subscribe("data", func(msg *sse.Event) {
-		log.Println(string(msg.Data))
+	client.Subscribe("", func(msg *sse.Event) {
 		var noticeData leveldb.NoticeData
 		json.Unmarshal(msg.Data, &noticeData)
-		log.Println(noticeData)
 
 		f(noticeData.Before, noticeData.After)
 	})
@@ -59,12 +50,16 @@ func (c *WatchClient) Watch(f func(before interface{}, after interface{})) error
 	return nil
 }
 
-func (c *WatchClient) getPath() string {
+func (c *WatchClient) getPath(apiType string) string {
+	query := ""
+	if apiType != "" {
+		query = "?apiType=" + apiType
+	}
 	return fmt.Sprintf("%s://%s",
 		c.scheme,
 		filepath.Join(
 			fmt.Sprintf("%s:%d", c.apiServerAddress, c.apiServerPort),
-			fmt.Sprintf(basePathFormat),
+			fmt.Sprintf(basePathFormat, query),
 		))
 
 }

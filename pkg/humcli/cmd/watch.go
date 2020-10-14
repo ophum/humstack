@@ -16,7 +16,11 @@ var watchCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		clients := client.NewClients("localhost", 8080)
 
-		clients.WatchV0().Watch(func(before, after interface{}) {
+		apiType := ""
+		if len(args) > 0 {
+			apiType = args[0]
+		}
+		clients.WatchV0().Watch(apiType, func(before, after interface{}) {
 			log.Println("WATCH")
 			log.Printf("BEFORE: %+v", before)
 			log.Printf("AFTER: %+v", after)

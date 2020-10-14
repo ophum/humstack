@@ -87,6 +87,7 @@ func (h *ExternalIPHandler) Create(ctx *gin.Context) {
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
+	request.APIType = meta.APITypeExternalIPV0
 	h.store.Put(key, request)
 
 	meta.ResponseJSON(ctx, http.StatusCreated, nil, gin.H{

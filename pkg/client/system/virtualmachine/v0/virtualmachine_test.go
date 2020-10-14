@@ -201,3 +201,12 @@ func TestVirtualMachineDeleteState(t *testing.T) {
 	}
 
 }
+
+func TestVirtualMachineDelete(t *testing.T) {
+	client := NewVirtualMachineClient("http", "localhost", 8080)
+
+	err := client.Delete("test-gr", "test-ns", "test-vm")
+	if err != nil {
+		t.Fatal(err)
+	}
+}

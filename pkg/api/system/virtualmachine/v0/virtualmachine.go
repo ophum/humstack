@@ -86,6 +86,7 @@ func (h *VirtualMachineHandler) Create(ctx *gin.Context) {
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
+	request.APIType = meta.APITypeVirtualMachineV0
 	h.store.Put(key, request)
 
 	meta.ResponseJSON(ctx, http.StatusCreated, nil, gin.H{
