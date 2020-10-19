@@ -2,8 +2,12 @@ apiServerAddress: localhost
 apiServerPort: 8080
 limitMemory: 8G
 limitVcpus: 8000m
-blockStorageDirPath: ./blockstorages
 
+blockStorageAgentConfig:
+  blockStorageDirPath: ./blockstorages
+  downloadAPI:
+    listenAddress: 0.0.0.0
+    listenPort: 8082
 networkAgentConfig:
   vxlan:
     devName: eth0

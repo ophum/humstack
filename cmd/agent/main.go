@@ -17,11 +17,12 @@ import (
 )
 
 type Config struct {
-	ApiServerAddress    string `yaml:"apiServerAddress"`
-	ApiServerPort       int32  `yaml:"apiServerPort"`
-	LimitMemory         string `yaml:"limitMemory"`
-	LimitVcpus          string `yaml:"limitVcpus"`
-	BlockStorageDirPath string `yaml:"blockStorageDirPath"`
+	ApiServerAddress string `yaml:"apiServerAddress"`
+	ApiServerPort    int32  `yaml:"apiServerPort"`
+	LimitMemory      string `yaml:"limitMemory"`
+	LimitVcpus       string `yaml:"limitVcpus"`
+
+	BlockStorageAgentConfig blockstorage.BlockStorageAgentConfig `yaml:"blockStorageAgentConfig"`
 
 	NetworkAgentConfig network.NetworkAgentConfig `yaml:"networkAgentConfig"`
 }
@@ -49,6 +50,7 @@ func init() {
 		log.Fatal("failed decode config")
 	}
 
+	log.Println(config)
 }
 
 func main() {
@@ -71,7 +73,7 @@ func main() {
 
 	netAgent := network.NewNetworkAgent(client, &config.NetworkAgentConfig)
 
-	bsAgent := blockstorage.NewBlockStorageAgent(client, config.BlockStorageDirPath)
+	bsAgent := blockstorage.NewBlockStorageAgent(client, config.BlockStorageAgentConfig.BlockStorageDirPath)
 
 	vmAgent := virtualmachine.NewVirtualMachineAgent(client)
 
@@ -79,6 +81,10 @@ func main() {
 
 	go nodeAgent.Run()
 	go bsAgent.Run()
+	go bsAgent.DownloadAPI(
+		config.BlockStorageAgentConfig.DownloadAPI.ListenAddress,
+		config.BlockStorageAgentConfig.DownloadAPI.ListenPort,
+	)
 	go vmAgent.Run()
 	go vrAgent.Run()
 	netAgent.Run()
