@@ -188,16 +188,31 @@ meta:
   annotations:
     virtualrouterv0/node_name: worker2
 spec:
+  # 外部ネットワークのゲートウェイ
   externalGateway: 192.168.10.254
+
+  # 外部ネットワークのIPのbind
   externalIPs:
+      # 外部IP
     - externalIPID: eip1
+      # 外部IPをどのアドレスにDNATするか
       bindInternalIPv4Address: 10.0.0.1
+  # 外部IPのないVMのNAT用IP
   natGatewayIP: 192.168.10.200
+
   nics:
+      # 接続するネットワーク
     - networkID: net1
+      # 接続するインターフェースに設定するIPアドレス
       ipv4Address: 10.0.0.254/24
 
 ```
+
+##### annotations
+
+| key                       | value    | description                          |
+| ------------------------- | -------- | ------------------------------------ |
+| virtualrouterv0/node_name | ホスト名 | vRouter を動作させる node のホスト名 |
 
 #### systemv0/blockstorage
 
@@ -214,14 +229,26 @@ meta:
     blockstoragev0/node_name: worker1
     blockstoragev0/type: Local
 spec:
+  # リクエストサイズ
   requestSize: 1G
+  # リミットサイズ
   limitSize: 10G
+  # 何をベースにするか
   from:
+    # HTTPでDLする
     type: HTTP
     http:
+      # DLするイメージのURL
       url: http://192.168.20.2:8082/focal-server-cloudimg-amd64.img
 
 ```
+
+##### annotations
+
+| key                      | value    | description                                                                            |
+| ------------------------ | -------- | -------------------------------------------------------------------------------------- |
+| blockstoragev0/type      | `Local`  | BlockStorage をどこに保存するか。`Local`の場合は`blockstoragev0/node_name`の指定が必要 |
+| blockstoragev0/node_name | ホスト名 | BlockStorage を保存する node のホスト名                                                |
 
 #### systemv0/virtualmachine
 
@@ -237,21 +264,35 @@ meta:
   annotations:
     virtualmachinev0/node_name: worker1
 spec:
+
   requestVcpus: 1000m
   limitVcpus: 1000m
   requestMemory: 1G
   limitMemory: 1G
+  # BlockStorageのIDの配列
   blockStorageIDs:
     - bs1
+  # 接続するネットワークの配列
   nics:
     - networkID: net1
+      # cloudinitで設定するIPアドレス
       ipv4Address: 10.0.0.1
+      # cloudinitで設定するネームサーバー
       nameservers:
         - 8.8.8.8
+      # cloudinitで設定するデフォルトゲートウェイ
       defaultGateway: 10.0.0.254
+  # VMを起動
   actionState: PowerOn
+  # cloudinitで設定するユーザーの配列
   loginUsers:
     - username: test
       sshAuthorizedKeys:
         - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCsf7CDppU1lSzUbsmszAXX/rAXdGxB71i93IsZtV4omO/uRz/z6dLIsBidf9vIqcEfCFTFR00ULC+GKULTNz2LOaGnGsDS28Bi5u+cx90+BCAzEg6cBwPIYmdZgASsjMmRvI/r+xR/gNxq2RCR8Gl8y5voAWoU8aezRUxf1Ra3KljMd1dbIFGJxgzNiwqN3yL0tr9zActw/Q7yBWKWi1c5sW2QZLAnSj/WWTSGGm0Ad88Aq22DakwN6itUkS6XNhr4YKehLVm90fIojrCrtZmClULAlnUk5lbdzou4jiETsZz3zk/q76ZQ3ugk+G00kcx9v6ElLkAFv2ZZqzWbMvUz6J0k2SzkAIbcBDz+aq2sXeY04FaIOFPiH41+DTQXCtOskWkaJBMKLTE/Z83nSyQGr9If2F/PbnuxGkwiZzeZaLWxqI2SebhLR5jPETgfhB1y83RP6u8Jq5+9BUURFqpb8mfG/riTnAj0ZR4Li23+/hWhc8We+fVB1BxdbWyRn/M=
 ```
+
+##### annotations
+
+| key                        | value    | description                   |
+| -------------------------- | -------- | ----------------------------- |
+| virtualmachinev0/node_name | ホスト名 | vm を起動する node のホスト名 |
