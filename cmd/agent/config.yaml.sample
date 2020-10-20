@@ -12,3 +12,5 @@ networkAgentConfig:
   vxlan:
     devName: eth0
     group: 239.0.0.1
+  vlan:
+    devName: enp0s8

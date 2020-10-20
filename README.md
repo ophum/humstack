@@ -57,7 +57,10 @@ networkAgentConfig:
     devName: eth0
     # vxlanで使用するマルチキャストIP
     group: 239.0.0.1
-
+  # vlanの設定
+  vlan:
+    # デバイス名
+    devName: eth0
 ```
 
 ## humcli
@@ -125,8 +128,8 @@ meta:
   name: eippool
 spec:
   ipv4CIDR: 192.168.10.0/24
-  BridgeName: exBr
-  DefaultGateway: 192.168.10.254
+  bridgeName: exBr
+  defaultGateway: 192.168.10.254
 ```
 
 #### corev0/externalip
@@ -168,11 +171,11 @@ spec:
 
 ##### annotations
 
-| key                       | value                     | description                                                                                          |
-| ------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------- |
-| networkv0/network_type    | `VXLAN`, `VLAN`, `Bridge` | `VXLAN`の場合`vxlan`の link と Bridge が作成される。`VXLAN` 未実装。`Bridge`は Bridge のみ作成される |
-| networkv0/bridge_name     |                           | agent によって作成された Bridge の名前が入る                                                         |
-| networkv0/default_gateway | `xxx.xxx.xxx.xxx/xx`      | 指定されたアドレスが Bridge に対して設定され、コンピュートノード上の iptables で NAPT される         |
+| key                       | value                     | description                                                                                                              |
+| ------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| networkv0/network_type    | `VXLAN`, `VLAN`, `Bridge` | `VXLAN`の場合`vxlan`の link と Bridge が作成される。`VLAN` link と Bridge が作成される。`Bridge`は Bridge のみ作成される |
+| networkv0/bridge_name     |                           | agent によって作成された Bridge の名前が入る                                                                             |
+| networkv0/default_gateway | `xxx.xxx.xxx.xxx/xx`      | 指定されたアドレスが Bridge に対して設定され、コンピュートノード上の iptables で NAPT される                             |
 
 #### systemv0/virtualrouter
 

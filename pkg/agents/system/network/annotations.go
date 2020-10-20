@@ -4,4 +4,5 @@ const (
 	NetworkV0AnnotationBridgeName     = "networkv0/bridge_name"
 	NetworkV0AnnotationDefaultGateway = "networkv0/default_gateway"
 	NetworkV0AnnotationVXLANName      = "networkv0/vxlan_name"
+	NetworkV0AnnotationVLANName       = "networkv0/vlan_name"
 )
