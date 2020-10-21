@@ -25,24 +25,26 @@ func (a *NetworkAgent) syncVLANNetwork(network *system.Network) error {
 			return err
 		}
 	}
-	index := vlanLink.Attrs().MasterIndex
-	attachedBr, err := netlink.LinkByIndex(index)
-	if err != nil {
-		if err.Error() != "Link not found" {
-			return err
-		}
-	} else {
-		if bridgeName != attachedBr.Attrs().Name {
-			// vlan id is already used
-			network.Status.Logs = append(network.Status.Logs, system.NetworkStatusLog{
-				NodeID:   a.node,
-				Datetime: time.Now().String(),
-				Log:      fmt.Sprintf("vlan id `%s` is already used.", network.Spec.ID),
-			})
-			if _, err := a.client.SystemV0().Network().Update(network); err != nil {
+	if err == nil {
+		index := vlanLink.Attrs().MasterIndex
+		attachedBr, err := netlink.LinkByIndex(index)
+		if err != nil {
+			if err.Error() != "Link not found" {
 				return err
 			}
-			return fmt.Errorf("vlan id `%s` is already used.", network.Spec.ID)
+		} else {
+			if bridgeName != attachedBr.Attrs().Name {
+				// vlan id is already used
+				network.Status.Logs = append(network.Status.Logs, system.NetworkStatusLog{
+					NodeID:   a.node,
+					Datetime: time.Now().String(),
+					Log:      fmt.Sprintf("vlan id `%s` is already used.", network.Spec.ID),
+				})
+				if _, err := a.client.SystemV0().Network().Update(network); err != nil {
+					return err
+				}
+				return fmt.Errorf("vlan id `%s` is already used.", network.Spec.ID)
+			}
 		}
 	}
 
