@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 type NetworkAgent struct {
 	client *client.Clients
 	config *NetworkAgentConfig
+	node   string
 }
 
 const (
@@ -28,9 +30,14 @@ const (
 )
 
 func NewNetworkAgent(client *client.Clients, config *NetworkAgentConfig) *NetworkAgent {
+	node, err := os.Hostname()
+	if err != nil {
+		log.Fatal(err)
+	}
 	return &NetworkAgent{
 		client: client,
 		config: config,
+		node:   node,
 	}
 }
 
@@ -110,7 +117,14 @@ func (a *NetworkAgent) Run() {
 						case NetworkV0NetworkTypeVXLAN:
 							err = a.syncVXLANNetwork(net)
 							if err != nil {
-								log.Println("error sync bridge network")
+								log.Println("error sync vxlan network")
+								log.Println(err)
+								continue
+							}
+						case NetworkV0NetworkTypeVLAN:
+							err = a.syncVLANNetwork(net)
+							if err != nil {
+								log.Println("error sync vlan network")
 								log.Println(err)
 								continue
 							}

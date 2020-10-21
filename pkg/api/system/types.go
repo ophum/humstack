@@ -22,9 +22,15 @@ const (
 	NetworkStateDeleting  NetworkState = "Deleting"
 )
 
+type NetworkStatusLog struct {
+	NodeID   string `json:"nodeID" yaml:"nodeID"`
+	Datetime string `json:"datetime" yaml:"datetime"`
+	Log      string `json:"log" yaml:"log"`
+}
 type NetworkStatus struct {
 	State              NetworkState                 `json:"state" yaml:"state"`
 	AttachedInterfaces map[string]VirtualMachineNIC `json:"attachedInterfaces" yaml:"attachedInterfaces"`
+	Logs               []NetworkStatusLog           `json:"logs" yaml:"logs"`
 }
 
 type Network struct {
