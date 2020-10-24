@@ -308,7 +308,7 @@ spec:
     type: BaseImage
     baseImage:
       imageName: ubuntu
-      tag: 2004
+      tag: "2004"
 ```
 
 ##### annotations
