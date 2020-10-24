@@ -37,17 +37,24 @@ sudo ./agent --config config.yaml
 #### config.yaml
 
 ```
-# apiserverのアドレス
+# apiserverのアドレスとポート
 apiServerAddress: localhost
-# apiserverのポート
 apiServerPort: 8080
 
 # agentが動作するノードのリソース量(使われていない)
 limitMemory: 8G
 limitVcpus: 8000m
 
-# blockstorageを保存する場所
-blockStorageDirPath: ./blockstorages
+# blockStorageAgentの設定
+blockStorageAgentConfig:
+  # blockstorageを保存する場所
+  blockStorageDirPath: ./blockstorages
+  # imageが保存される場所
+  imageDirPath: ./images
+  # DL用のListenアドレスとポート
+  downloadAPI:
+    listenAddress: 0.0.0.0
+    listenPort: 8082
 
 # networkAgentの設定
 networkAgentConfig:
@@ -61,6 +68,15 @@ networkAgentConfig:
   vlan:
     # デバイス名
     devName: eth0
+
+# imageAgentの設定
+imageAgentConfig:
+  # blockstorageが保存されている場所
+  blockStorageDirPath: ./blockstorages
+  # imageを保存する場所
+  imageDirPath: ./images
+
+
 ```
 
 ## humcli
@@ -217,6 +233,40 @@ spec:
 | ------------------------- | -------- | ------------------------------------ |
 | virtualrouterv0/node_name | ホスト名 | vRouter を動作させる node のホスト名 |
 
+#### systemv0/imageentity
+
+イメージの実体。namespace で分離しない。
+`.spec.source`に指定した namespace にある blockstorage をコピーする。
+blockstorage が Active なときにコピーする
+
+```
+meta:
+  apiType: systemv0/imageentity
+  id: ientity1
+  group: group1
+spec:
+  source:
+    namespace: ns1
+    blockStorageID: bs1
+```
+
+#### systemv0/image
+
+イメージ名とタグに実体を紐付ける。
+追記していく必要がある。
+
+```
+meta:
+  apiType: systemv0/image
+  id: base-image
+  group: group1
+spec:
+  entityMap:
+    latest: test-entity-1
+    "0.1": hogehoge
+
+```
+
 #### systemv0/blockstorage
 
 仮想ディスク。
@@ -244,6 +294,21 @@ spec:
       # DLするイメージのURL
       url: http://192.168.20.2:8082/focal-server-cloudimg-amd64.img
 
+```
+
+###### from baseImage
+
+例えばイメージ名が`ubuntu`, タグが`2004`のイメージを元に作成する場合、spec は以下のようにする。
+
+```
+spec:
+  requestSize: 1G
+  limitSize: 10G
+  from:
+    type: BaseImage
+    baseImage:
+      imageName: ubuntu
+      tag: 2004
 ```
 
 ##### annotations
