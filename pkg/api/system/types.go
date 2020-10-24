@@ -40,12 +40,23 @@ type Network struct {
 	Status NetworkStatus `json:"status" yaml:"status"`
 }
 
-type ImageTag struct {
-	Tag              string `json:""`
-	BlockStorageName string `json:"blockStorageName" yaml:"blockStorageName"`
+type ImageEntitySource struct {
+	Namespace      string `json:"namespace" yaml:"namespace"`
+	BlockStorageID string `json:"blockStorageID" yaml:"blockStorageID"`
 }
+type ImageEntitySpec struct {
+	Hash   string            `json:"hash" yaml:"hash"`
+	Source ImageEntitySource `json:"source" yaml:"source"`
+}
+
+type ImageEntity struct {
+	meta.Meta `json:"meta" yaml:"meta"`
+
+	Spec ImageEntitySpec `json:"spec" yaml:"spec"`
+}
+
 type ImageSpec struct {
-	Tags []ImageTag `json:"tags" yaml:"tags"`
+	EntityMap map[string]string `json:"entityMap" yaml:"entityMap"`
 }
 
 type Image struct {

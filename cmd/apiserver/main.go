@@ -16,6 +16,10 @@ import (
 	nsv0 "github.com/ophum/humstack/pkg/api/core/namespace/v0"
 	"github.com/ophum/humstack/pkg/api/system/blockstorage"
 	bsv0 "github.com/ophum/humstack/pkg/api/system/blockstorage/v0"
+	"github.com/ophum/humstack/pkg/api/system/image"
+	imv0 "github.com/ophum/humstack/pkg/api/system/image/v0"
+	"github.com/ophum/humstack/pkg/api/system/imageentity"
+	iev0 "github.com/ophum/humstack/pkg/api/system/imageentity/v0"
 	"github.com/ophum/humstack/pkg/api/system/network"
 	netv0 "github.com/ophum/humstack/pkg/api/system/network/v0"
 	"github.com/ophum/humstack/pkg/api/system/node"
@@ -76,6 +80,8 @@ func main() {
 	vrh := vrv0.NewVirtualRouterHandler(s)
 	eippoolh := eippoolv0.NewExternalIPPoolHandler(s)
 	eiph := eipv0.NewExternalIPHandler(s)
+	imh := imv0.NewImageHandler(s)
+	ieh := iev0.NewImageEntityHandler(s)
 	nodeh := nodev0.NewNodeHandler(s)
 	watchh := watchv0.NewWatchHandler(notifiers)
 
@@ -89,6 +95,8 @@ func main() {
 		vri := virtualrouter.NewVirtualRouterHandler(v0, vrh)
 		eippooli := externalippool.NewExternalIPPoolHandler(v0, eippoolh)
 		eipi := externalip.NewExternalIPHandler(v0, eiph)
+		imi := image.NewImageHandler(v0, imh)
+		iei := imageentity.NewImageEntityHandler(v0, ieh)
 		nodei := node.NewNodeHandler(v0, nodeh)
 		watchi := watch.NewWatchHandler(v0, watchh)
 
@@ -100,6 +108,8 @@ func main() {
 		vri.RegisterHandlers()
 		eippooli.RegisterHandlers()
 		eipi.RegisterHandlers()
+		imi.RegisterHandlers()
+		iei.RegisterHandlers()
 		nodei.RegisterHandlers()
 		watchi.RegisterHandlers()
 	}
