@@ -20,6 +20,7 @@ import (
 type BlockStorageAgent struct {
 	client                     *client.Clients
 	localBlockStorageDirectory string
+	localImageDirectory        string
 }
 
 const (
@@ -31,10 +32,11 @@ const (
 	BlockStorageV0BlockStorageTypeLocal = "Local"
 )
 
-func NewBlockStorageAgent(client *client.Clients, localBlockStorageDirectory string) *BlockStorageAgent {
+func NewBlockStorageAgent(client *client.Clients, localBlockStorageDirectory, localImageDirectory string) *BlockStorageAgent {
 	return &BlockStorageAgent{
 		client:                     client,
 		localBlockStorageDirectory: localBlockStorageDirectory,
+		localImageDirectory:        localImageDirectory,
 	}
 }
 

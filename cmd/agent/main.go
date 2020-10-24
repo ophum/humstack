@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/ophum/humstack/pkg/agents/system/blockstorage"
+	"github.com/ophum/humstack/pkg/agents/system/image"
 	"github.com/ophum/humstack/pkg/agents/system/network"
 	"github.com/ophum/humstack/pkg/agents/system/node"
 	"github.com/ophum/humstack/pkg/agents/system/virtualmachine"
@@ -25,6 +26,8 @@ type Config struct {
 	BlockStorageAgentConfig blockstorage.BlockStorageAgentConfig `yaml:"blockStorageAgentConfig"`
 
 	NetworkAgentConfig network.NetworkAgentConfig `yaml:"networkAgentConfig"`
+
+	ImageAgentConfig image.ImageAgentConfig `yaml:"imageAgentConfig"`
 }
 
 var (
@@ -73,7 +76,9 @@ func main() {
 
 	netAgent := network.NewNetworkAgent(client, &config.NetworkAgentConfig)
 
-	bsAgent := blockstorage.NewBlockStorageAgent(client, config.BlockStorageAgentConfig.BlockStorageDirPath)
+	bsAgent := blockstorage.NewBlockStorageAgent(client, config.BlockStorageAgentConfig.BlockStorageDirPath, config.BlockStorageAgentConfig.ImageDirPath)
+
+	imAgent := image.NewImageAgent(client, config.ImageAgentConfig.ImageDirPath, config.BlockStorageAgentConfig.BlockStorageDirPath)
 
 	vmAgent := virtualmachine.NewVirtualMachineAgent(client)
 
@@ -88,5 +93,6 @@ func main() {
 	go vmAgent.Run()
 	go vrAgent.Run()
 	netAgent.Run()
+	imAgent.Run()
 
 }

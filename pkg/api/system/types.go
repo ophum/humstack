@@ -49,10 +49,23 @@ type ImageEntitySpec struct {
 	Source ImageEntitySource `json:"source" yaml:"source"`
 }
 
+type ImageEntityState string
+
+const (
+	ImageEntityStatePending   ImageEntityState = "Pending"
+	ImageEntityStateCopying   ImageEntityState = "Copying"
+	ImageEntityStateAvailable ImageEntityState = "Available"
+	ImageEntityStateDeleting  ImageEntityState = "Deleting"
+)
+
+type ImageEntityStatus struct {
+	State ImageEntityState `json:"state" yaml:"state"`
+}
 type ImageEntity struct {
 	meta.Meta `json:"meta" yaml:"meta"`
 
-	Spec ImageEntitySpec `json:"spec" yaml:"spec"`
+	Spec   ImageEntitySpec   `json:"spec" yaml:"spec"`
+	Status ImageEntityStatus `json:"status" yaml:"status"`
 }
 
 type ImageSpec struct {
@@ -106,6 +119,8 @@ const (
 	BlockStorageStateUsed     BlockStorageState = "Used"
 	BlockStorageStatePending  BlockStorageState = "Pending"
 	BlockStorageStateDeleting BlockStorageState = "Deleting"
+	BlockStorageStateCopying  BlockStorageState = "Copying"
+	BlockStorageStateReserved BlockStorageState = "Reserved"
 )
 
 type BlockStorageStatus struct {

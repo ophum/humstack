@@ -22,7 +22,7 @@ type BlockStorageResponse struct {
 	Code  int32       `json:"code"`
 	Error interface{} `json:"error"`
 	Data  struct {
-		BlockStorage system.BlockStorage `json:"blockStorage"`
+		BlockStorage system.BlockStorage `json:"blockstorage"`
 	} `json:"data"`
 }
 
@@ -30,7 +30,7 @@ type BlockStorageListResponse struct {
 	Code  int32       `json:"code"`
 	Error interface{} `json:"error"`
 	Data  struct {
-		BlockStorageList []*system.BlockStorage `json:"blockStorages"`
+		BlockStorageList []*system.BlockStorage `json:"blockstorages"`
 	} `json:"data"`
 }
 

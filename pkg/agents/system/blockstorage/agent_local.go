@@ -112,6 +112,50 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 			log.Println(err.Error())
 			return err
 		}
+	case system.BlockStorageFromTypeBaseImage:
+		log.Printf("[BS] Copy from base image.")
+		image, err := a.client.SystemV0().Image().Get(bs.Group, bs.Spec.From.BaseImage.ImageName)
+		if err != nil {
+			return err
+		}
+
+		log.Println(image)
+
+		imageEntity, ok := image.Spec.EntityMap[bs.Spec.From.BaseImage.Tag]
+		if !ok {
+			return fmt.Errorf("Image Entity not found")
+		}
+
+		srcPath := filepath.Join(a.localImageDirectory, bs.Group, imageEntity)
+
+		// TODO: なかったら別のノードから持ってくるようにする
+		src, err := os.Open(srcPath)
+		if err != nil {
+			return err
+		}
+		defer src.Close()
+
+		dest, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		defer dest.Close()
+
+		if _, err := io.Copy(dest, src); err != nil {
+			return err
+		}
+
+		command := "qemu-img"
+		args := []string{
+			"resize",
+			path,
+			withUnitToWithoutUnit(bs.Spec.LimitSize),
+		}
+		cmd := exec.Command(command, args...)
+		if _, err := cmd.CombinedOutput(); err != nil {
+			log.Println(err.Error())
+			return err
+		}
 	}
 
 	if bs.Status.State == "" || bs.Status.State == system.BlockStorageStatePending {

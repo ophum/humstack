@@ -5,6 +5,7 @@ limitVcpus: 8000m
 
 blockStorageAgentConfig:
   blockStorageDirPath: ./blockstorages
+  imageDirPath: ./images
   downloadAPI:
     listenAddress: 0.0.0.0
     listenPort: 8082
@@ -14,3 +15,7 @@ networkAgentConfig:
     group: 239.0.0.1
   vlan:
     devName: enp0s8
+
+imageAgentConfig:
+  blockStorageDirPath: ./blockstorages
+  imageDirPath: ./images
