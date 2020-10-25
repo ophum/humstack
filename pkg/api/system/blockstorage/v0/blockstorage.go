@@ -150,6 +150,34 @@ func (h *BlockStorageHandler) Update(ctx *gin.Context) {
 	})
 }
 
+func (h *BlockStorageHandler) UpdateStatus(ctx *gin.Context) {
+	groupID, nsID, _ := getIDs(ctx)
+
+	var request system.BlockStorage
+	if err := ctx.Bind(&request); err != nil {
+		meta.ResponseJSON(ctx, http.StatusBadRequest, err, nil)
+		return
+	}
+
+	key := getKey(groupID, nsID, request.ID)
+
+	h.store.Lock(key)
+	defer h.store.Unlock(key)
+
+	var bs system.BlockStorage
+	if err := h.store.Get(key, &bs); err != nil {
+		meta.ResponseJSON(ctx, http.StatusInternalServerError, err, nil)
+		return
+	}
+
+	bs.Status = request.Status
+	h.store.Put(key, bs)
+
+	meta.ResponseJSON(ctx, http.StatusCreated, nil, gin.H{
+		"blockstorage": bs,
+	})
+}
+
 func (h *BlockStorageHandler) Delete(ctx *gin.Context) {
 	groupID, nsID, bsID := getIDs(ctx)
 

@@ -8,6 +8,7 @@ type BlockStorageHandlerInterface interface {
 	Create(ctx *gin.Context)
 	Update(ctx *gin.Context)
 	Delete(ctx *gin.Context)
+	UpdateStatus(ctx *gin.Context)
 }
 
 type BlockStorageHandler struct {
@@ -32,6 +33,7 @@ func (h *BlockStorageHandler) RegisterHandlers() {
 		bs.GET("", h.bshi.FindAll)
 		bs.GET("/:block_storage_id", h.bshi.Find)
 		bs.POST("", h.bshi.Create)
+		bs.PUT("/:block_storage_id/status", h.bshi.UpdateStatus)
 		bs.PUT("/:block_storage_id", h.bshi.Update)
 		bs.DELETE("/:block_storage_id", h.bshi.Delete)
 	}

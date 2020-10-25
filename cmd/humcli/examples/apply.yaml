@@ -1,0 +1,11 @@
+---
+meta:
+  apiType: corev0/group
+  id: group2
+  name: grouphoge
+---
+meta:
+  apiType: corev0/namespace
+  id: ns10
+  group: group2
+  name: namespace10
