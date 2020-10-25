@@ -74,6 +74,16 @@ var deleteCmd = &cobra.Command{
 					if err != nil {
 						log.Fatal(err)
 					}
+				case meta.APITypeImageV0:
+					err = clients.SystemV0().Image().Delete(item.Meta.Group, item.Meta.ID)
+					if err != nil {
+						log.Fatal(err)
+					}
+				case meta.APITypeImageEntityV0:
+					err = clients.SystemV0().ImageEntity().Delete(item.Meta.Group, item.Meta.ID)
+					if err != nil {
+						log.Fatal(err)
+					}
 				}
 			}
 		}

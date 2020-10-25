@@ -58,11 +58,7 @@ var updateCmd = &cobra.Command{
 						log.Fatal(errors.Wrap(err, "create").Error())
 					}
 
-					resYAML, err := yaml.Marshal(gr)
-					if err != nil {
-						log.Fatal(errors.Wrap(err, "marshal").Error())
-					}
-					fmt.Println(string(resYAML))
+					printYAML(gr)
 				case meta.APITypeNamespaceV0:
 					ns := &core.Namespace{}
 					if err = d.Decode(ns); err != nil {
@@ -74,12 +70,7 @@ var updateCmd = &cobra.Command{
 						log.Fatal(errors.Wrap(err, "create").Error())
 					}
 
-					resYAML, err := yaml.Marshal(ns)
-					if err != nil {
-						log.Fatal(errors.Wrap(err, "marshal").Error())
-					}
-					fmt.Println(string(resYAML))
-
+					printYAML(ns)
 				case meta.APITypeExternalIPPoolV0:
 					eippool := &core.ExternalIPPool{}
 					err = d.Decode(eippool)
@@ -92,12 +83,7 @@ var updateCmd = &cobra.Command{
 						log.Fatal(err)
 					}
 
-					eippoolYAML, err := yaml.Marshal(eippool)
-					if err != nil {
-						log.Fatal(err)
-					}
-
-					fmt.Println(string(eippoolYAML))
+					printYAML(eippool)
 				case meta.APITypeExternalIPV0:
 					eip := &core.ExternalIP{}
 					err = d.Decode(eip)
@@ -110,12 +96,7 @@ var updateCmd = &cobra.Command{
 						log.Fatal(err)
 					}
 
-					eipYAML, err := yaml.Marshal(eip)
-					if err != nil {
-						log.Fatal(err)
-					}
-
-					fmt.Println(string(eipYAML))
+					printYAML(eip)
 				case meta.APITypeNetworkV0:
 					net := &system.Network{}
 					err = d.Decode(net)
@@ -128,12 +109,7 @@ var updateCmd = &cobra.Command{
 						log.Fatal(err)
 					}
 
-					netYAML, err := yaml.Marshal(net)
-					if err != nil {
-						log.Fatal(err)
-					}
-
-					fmt.Println(string(netYAML))
+					printYAML(net)
 				case meta.APITypeBlockStorageV0:
 					bs := &system.BlockStorage{}
 					err = d.Decode(bs)
@@ -141,18 +117,12 @@ var updateCmd = &cobra.Command{
 						log.Fatal(err)
 					}
 
-					log.Println(bs)
 					bs, err = clients.SystemV0().BlockStorage().Update(bs)
 					if err != nil {
 						log.Fatal(err.Error())
 					}
 
-					bsYAML, err := yaml.Marshal(bs)
-					if err != nil {
-						log.Fatal(err)
-					}
-
-					fmt.Println(string(bsYAML))
+					printYAML(bs)
 				case meta.APITypeVirtualMachineV0:
 					vm := &system.VirtualMachine{}
 					err = d.Decode(vm)
@@ -165,12 +135,7 @@ var updateCmd = &cobra.Command{
 						log.Fatal(err)
 					}
 
-					vmYAML, err := yaml.Marshal(vm)
-					if err != nil {
-						log.Fatal(err)
-					}
-
-					fmt.Println(string(vmYAML))
+					printYAML(vm)
 				case meta.APITypeVirtualRouterV0:
 					vr := &system.VirtualRouter{}
 					err = d.Decode(vr)
@@ -183,13 +148,31 @@ var updateCmd = &cobra.Command{
 						log.Fatal(err)
 					}
 
-					vrYAML, err := yaml.Marshal(vr)
+					printYAML(vr)
+				case meta.APITypeImageV0:
+					image := &system.Image{}
+					if err = d.Decode(image); err != nil {
+						log.Fatal(err)
+					}
+
+					image, err = clients.SystemV0().Image().Update(image)
 					if err != nil {
 						log.Fatal(err)
 					}
 
-					fmt.Println(string(vrYAML))
+					printYAML(image)
+				case meta.APITypeImageEntityV0:
+					imageEntity := &system.ImageEntity{}
+					if err := d.Decode(imageEntity); err != nil {
+						log.Fatal(err)
+					}
 
+					imageEntity, err = clients.SystemV0().ImageEntity().Update(imageEntity)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					printYAML(imageEntity)
 				}
 				r.Close()
 			}
