@@ -3,7 +3,6 @@ package v0
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"path/filepath"
 
 	"github.com/go-resty/resty/v2"
@@ -87,7 +86,6 @@ func (c *ExternalIPPoolClient) Create(eippool *core.ExternalIPPool) (*core.Exter
 	if err != nil {
 		return nil, err
 	}
-	log.Println(string(body))
 
 	resp, err := c.client.R().SetHeaders(c.headers).SetBody(body).Post(c.getPath(""))
 	if err != nil {
@@ -114,7 +112,6 @@ func (c *ExternalIPPoolClient) Update(eippool *core.ExternalIPPool) (*core.Exter
 		return nil, err
 	}
 
-	fmt.Println(string(body))
 	resp, err := c.client.R().SetHeaders(c.headers).SetBody(body).Put(c.getPath(eippool.ID))
 	if err != nil {
 		return nil, err

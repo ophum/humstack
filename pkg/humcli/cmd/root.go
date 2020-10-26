@@ -17,6 +17,7 @@ var (
 	apiServerPort    int32
 	group            string
 	namespace        string
+	debug            bool
 )
 
 func Execute() error {
@@ -31,6 +32,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&namespace, "n", "default", "namespace id")
 	rootCmd.PersistentFlags().StringVar(&apiServerAddress, "api-server-address", "localhost", "apiserver address")
 	rootCmd.PersistentFlags().Int32Var(&apiServerPort, "api-server-port", 8080, "apiserver Port")
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "debug mode")
 
 }
 

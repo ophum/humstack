@@ -5,10 +5,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/client"
-	"github.com/pkg/errors"
+	"github.com/ophum/humstack/pkg/humcli/cmd/apply"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
@@ -21,6 +20,19 @@ var applyCmd = &cobra.Command{
 	Use: "apply",
 	Run: func(cmd *cobra.Command, args []string) {
 		clients := client.NewClients(apiServerAddress, apiServerPort)
+		applyFuncMap := map[meta.APIType]func(d *yaml.Decoder, clients *client.Clients, debug bool) error{
+			meta.APITypeGroupV0:          apply.ApplyGroup,
+			meta.APITypeNamespaceV0:      apply.ApplyNamespace,
+			meta.APITypeExternalIPPoolV0: apply.ApplyExternalIPPool,
+			meta.APITypeExternalIPV0:     apply.ApplyExternalIP,
+			meta.APITypeBlockStorageV0:   apply.ApplyBlockStorage,
+			meta.APITypeImageV0:          apply.ApplyImage,
+			meta.APITypeImageEntityV0:    apply.ApplyImageEntity,
+			meta.APITypeNetworkV0:        apply.ApplyNetwork,
+			meta.APITypeVirtualMachineV0: apply.ApplyVirtualMachine,
+			meta.APITypeVirtualRouterV0:  apply.ApplyVirtualRouter,
+		}
+
 		for _, file := range args {
 			f, err := os.Open(file)
 			if err != nil {
@@ -41,53 +53,9 @@ var applyCmd = &cobra.Command{
 				}()
 
 				d := yaml.NewDecoder(r)
-				switch item.Meta.APIType {
-				case meta.APITypeGroupV0:
-					gr := &core.Group{}
-					if err = d.Decode(gr); err != nil {
-						log.Fatal(errors.Wrap(err, "decode").Error())
-					}
-
-					old, err := clients.CoreV0().Group().Get(gr.ID)
-					if err != nil {
-						log.Fatal(err.Error())
-					}
-					if old.ID == "" {
-						gr, err = clients.CoreV0().Group().Create(gr)
-						if err != nil {
-							log.Fatal(err)
-						}
-						log.Printf("corev0/group/%s created\n", gr.ID)
-					} else {
-						gr, err = clients.CoreV0().Group().Update(gr)
-						if err != nil {
-							log.Fatal(err)
-						}
-						log.Printf("corev0/group/%s updated\n", gr.ID)
-					}
-				case meta.APITypeNamespaceV0:
-					ns := &core.Namespace{}
-					if err := d.Decode(ns); err != nil {
-						log.Fatal(errors.Wrap(err, "deocde").Error())
-					}
-
-					old, err := clients.CoreV0().Namespace().Get(ns.Group, ns.ID)
-					if err != nil {
+				if f, ok := applyFuncMap[item.Meta.APIType]; ok {
+					if err := f(d, clients, debug); err != nil {
 						log.Fatal(err)
-					}
-
-					if old.ID == "" {
-						ns, err = clients.CoreV0().Namespace().Create(ns)
-						if err != nil {
-							log.Fatal(err)
-						}
-						log.Printf("%s/corev0/namespace/%s created\n", ns.Group, ns.ID)
-					} else {
-						ns, err = clients.CoreV0().Namespace().Update(ns)
-						if err != nil {
-							log.Fatal(err)
-						}
-						log.Printf("%s/corev0/namespace/%s updated\n", ns.Group, ns.ID)
 					}
 				}
 			}
