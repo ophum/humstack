@@ -3,6 +3,7 @@ package v0
 import (
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
@@ -190,6 +191,35 @@ func (h *BlockStorageHandler) Delete(ctx *gin.Context) {
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"blockstorage": nil,
 	})
+}
+
+func (h *BlockStorageHandler) ProxyDownloadAPI(ctx *gin.Context) {
+	groupID, nsID, bsID := getIDs(ctx)
+
+	key := getKey(groupID, nsID, bsID)
+	h.store.Lock(key)
+	defer h.store.Unlock(key)
+
+	var bs system.BlockStorage
+	if err := h.store.Get(key, &bs); err != nil {
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("blockstorage not found"), gin.H{})
+		return
+	}
+
+	target, ok := bs.Annotations["bs-download-host"]
+	if !ok {
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("proxy target not found"), gin.H{})
+		return
+	}
+
+	director := func(req *http.Request) {
+		req.URL.Scheme = "http"
+		req.URL.Host = target
+		req.Host = target
+	}
+
+	proxy := &httputil.ReverseProxy{Director: director}
+	proxy.ServeHTTP(ctx.Writer, ctx.Request)
 }
 
 func getIDs(ctx *gin.Context) (groupID, nsID, bsID string) {

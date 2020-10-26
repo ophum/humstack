@@ -76,7 +76,7 @@ func main() {
 
 	netAgent := network.NewNetworkAgent(client, &config.NetworkAgentConfig)
 
-	bsAgent := blockstorage.NewBlockStorageAgent(client, config.BlockStorageAgentConfig.BlockStorageDirPath, config.BlockStorageAgentConfig.ImageDirPath)
+	bsAgent := blockstorage.NewBlockStorageAgent(client, &config.BlockStorageAgentConfig)
 
 	imAgent := image.NewImageAgent(client, config.ImageAgentConfig.ImageDirPath, config.BlockStorageAgentConfig.BlockStorageDirPath)
 
@@ -86,13 +86,10 @@ func main() {
 
 	go nodeAgent.Run()
 	go bsAgent.Run()
-	go bsAgent.DownloadAPI(
-		config.BlockStorageAgentConfig.DownloadAPI.ListenAddress,
-		config.BlockStorageAgentConfig.DownloadAPI.ListenPort,
-	)
+	go bsAgent.DownloadAPI(&config.BlockStorageAgentConfig.DownloadAPI)
+	go imAgent.Run()
 	go vmAgent.Run()
 	go vrAgent.Run()
 	netAgent.Run()
-	imAgent.Run()
 
 }

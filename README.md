@@ -53,6 +53,8 @@ blockStorageAgentConfig:
   imageDirPath: ./images
   # DL用のListenアドレスとポート
   downloadAPI:
+    # ダウンロード時のプロキシ先に指定される
+    advertiseAddress: 192.168.10.1
     listenAddress: 0.0.0.0
     listenPort: 8082
 
@@ -313,10 +315,11 @@ spec:
 
 ##### annotations
 
-| key                      | value    | description                                                                            |
-| ------------------------ | -------- | -------------------------------------------------------------------------------------- |
-| blockstoragev0/type      | `Local`  | BlockStorage をどこに保存するか。`Local`の場合は`blockstoragev0/node_name`の指定が必要 |
-| blockstoragev0/node_name | ホスト名 | BlockStorage を保存する node のホスト名                                                |
+| key                      | value                           | description                                                                            |
+| ------------------------ | ------------------------------- | -------------------------------------------------------------------------------------- |
+| blockstoragev0/type      | `Local`                         | BlockStorage をどこに保存するか。`Local`の場合は`blockstoragev0/node_name`の指定が必要 |
+| blockstoragev0/node_name | ホスト名                        | BlockStorage を保存する node のホスト名                                                |
+| bs-download-host         | `advertise-address:listen-port` | agent が設定する                                                                       |
 
 #### systemv0/virtualmachine
 

@@ -9,6 +9,7 @@ type BlockStorageHandlerInterface interface {
 	Update(ctx *gin.Context)
 	Delete(ctx *gin.Context)
 	UpdateStatus(ctx *gin.Context)
+	ProxyDownloadAPI(ctx *gin.Context)
 }
 
 type BlockStorageHandler struct {
@@ -36,5 +37,6 @@ func (h *BlockStorageHandler) RegisterHandlers() {
 		bs.PUT("/:block_storage_id/status", h.bshi.UpdateStatus)
 		bs.PUT("/:block_storage_id", h.bshi.Update)
 		bs.DELETE("/:block_storage_id", h.bshi.Delete)
+		bs.GET("/:block_storage_id/download", h.bshi.ProxyDownloadAPI)
 	}
 }

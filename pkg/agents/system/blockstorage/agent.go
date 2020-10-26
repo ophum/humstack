@@ -4,21 +4,17 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
 )
 
 type BlockStorageAgent struct {
 	client                     *client.Clients
+	config                     *BlockStorageAgentConfig
 	localBlockStorageDirectory string
 	localImageDirectory        string
 }
@@ -32,47 +28,13 @@ const (
 	BlockStorageV0BlockStorageTypeLocal = "Local"
 )
 
-func NewBlockStorageAgent(client *client.Clients, localBlockStorageDirectory, localImageDirectory string) *BlockStorageAgent {
+func NewBlockStorageAgent(client *client.Clients, config *BlockStorageAgentConfig) *BlockStorageAgent {
 	return &BlockStorageAgent{
 		client:                     client,
-		localBlockStorageDirectory: localBlockStorageDirectory,
-		localImageDirectory:        localImageDirectory,
+		config:                     config,
+		localBlockStorageDirectory: config.BlockStorageDirPath,
+		localImageDirectory:        config.ImageDirPath,
 	}
-}
-
-func (a *BlockStorageAgent) DownloadAPI(apiServerAddress string, apiServerPort int32) error {
-	r := gin.Default()
-
-	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{"*"}
-	r.Use(cors.New(corsConfig))
-
-	r.GET("/api/v0/blockstorages/:group_id/:namespace_id/:bs_id", func(ctx *gin.Context) {
-		groupID := ctx.Param("group_id")
-		namespaceID := ctx.Param("namespace_id")
-		bsID := ctx.Param("bs_id")
-
-		ctx.Header("Content-Type", "application/octet-stream")
-		ctx.Header("Content-Disposition", "attachment; filename= "+bsID)
-
-		file, err := os.Open(filepath.Join(a.localBlockStorageDirectory, groupID, namespaceID, bsID))
-		if err != nil {
-			ctx.String(http.StatusInternalServerError, "%v", err)
-			return
-		}
-		defer file.Close()
-
-		_, err = io.Copy(ctx.Writer, file)
-		if err != nil {
-			log.Println(err)
-		}
-	})
-
-	if err := r.Run(fmt.Sprintf("%s:%d", apiServerAddress, apiServerPort)); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (a *BlockStorageAgent) Run() {

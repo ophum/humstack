@@ -158,6 +158,11 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 		}
 	}
 
+	if bs.Annotations == nil {
+		bs.Annotations = map[string]string{}
+	}
+
+	bs.Annotations["bs-download-host"] = fmt.Sprintf("%s:%d", a.config.DownloadAPI.AdvertiseAddress, a.config.DownloadAPI.ListenPort)
 	if bs.Status.State == "" || bs.Status.State == system.BlockStorageStatePending {
 		bs.Status.State = system.BlockStorageStateActive
 	}
