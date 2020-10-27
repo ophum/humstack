@@ -20,3 +20,6 @@ networkAgentConfig:
 imageAgentConfig:
   blockStorageDirPath: ./blockstorages
   imageDirPath: ./images
+  downloadAPI:
+    advertiseAddress: 192.168.10.1
+    listenPort: 8083

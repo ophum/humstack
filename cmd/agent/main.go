@@ -84,10 +84,12 @@ func main() {
 
 	vrAgent := virtualrouter.NewVirtualRouterAgent(client, "exBr", "10.0.0.0/24", []string{"10.0.0.1", "10.0.0.2"})
 
+	log.Println(config.ImageAgentConfig.DownloadAPI)
 	go nodeAgent.Run()
 	go bsAgent.Run()
 	go bsAgent.DownloadAPI(&config.BlockStorageAgentConfig.DownloadAPI)
 	go imAgent.Run()
+	go imAgent.DownloadAPI(&config.ImageAgentConfig.DownloadAPI)
 	go vmAgent.Run()
 	go vrAgent.Run()
 	netAgent.Run()
