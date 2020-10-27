@@ -78,7 +78,7 @@ func main() {
 
 	bsAgent := blockstorage.NewBlockStorageAgent(client, &config.BlockStorageAgentConfig)
 
-	imAgent := image.NewImageAgent(client, config.ImageAgentConfig.ImageDirPath, config.BlockStorageAgentConfig.BlockStorageDirPath)
+	imAgent := image.NewImageAgent(client, &config.ImageAgentConfig)
 
 	vmAgent := virtualmachine.NewVirtualMachineAgent(client)
 

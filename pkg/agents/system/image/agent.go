@@ -19,6 +19,7 @@ import (
 type ImageAgent struct {
 	client                     *client.Clients
 	nodeName                   string
+	config                     *ImageAgentConfig
 	localImageDirectory        string
 	localBlockStorageDirectory string
 }
@@ -31,7 +32,7 @@ const (
 	ImageEntityV0ImageEntityTypeLocal = "Local"
 )
 
-func NewImageAgent(client *client.Clients, localImageDirectory, localBlockStorageDirectory string) *ImageAgent {
+func NewImageAgent(client *client.Clients, config *ImageAgentConfig) *ImageAgent {
 	nodeName, err := os.Hostname()
 	if err != nil {
 		log.Fatal(err)
@@ -39,8 +40,9 @@ func NewImageAgent(client *client.Clients, localImageDirectory, localBlockStorag
 	return &ImageAgent{
 		client:                     client,
 		nodeName:                   nodeName,
-		localImageDirectory:        localImageDirectory,
-		localBlockStorageDirectory: localBlockStorageDirectory,
+		config:                     config,
+		localImageDirectory:        config.ImageDirPath,
+		localBlockStorageDirectory: config.BlockStorageDirPath,
 	}
 }
 
@@ -85,6 +87,11 @@ func (a *ImageAgent) Run() {
 						log.Println(a.nodeName)
 						log.Println("ImageEntity: other node")
 						continue
+					}
+
+					// ファイルがなければPENDINGとして扱う
+					if _, err := os.Stat(filepath.Join(a.localImageDirectory, imageEntity.Group, imageEntity.ID)); err != nil {
+						imageEntity.Status.State = system.ImageEntityStatePending
 					}
 
 					// とりあえずPending以外になってたら何もしない
@@ -172,6 +179,10 @@ func (a *ImageAgent) syncLocalImageEntity(imageEntity *system.ImageEntity, bs *s
 
 	imageEntity.Spec.Hash = fmt.Sprintf("sha256:%x", hasher.Sum(nil))
 
+	if imageEntity.Annotations == nil {
+		imageEntity.Annotations = map[string]string{}
+	}
+	imageEntity.Annotations["image-entity-download-host"] = fmt.Sprintf("%s:%d", a.config.DownloadAPI.AdvertiseAddress, a.config.DownloadAPI.ListenPort)
 	imageEntity.Status.State = system.ImageEntityStateAvailable
 	if _, err := a.client.SystemV0().ImageEntity().Update(imageEntity); err != nil {
 		return err

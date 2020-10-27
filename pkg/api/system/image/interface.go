@@ -8,6 +8,7 @@ type ImageHandlerInterface interface {
 	Create(ctx *gin.Context)
 	Update(ctx *gin.Context)
 	Delete(ctx *gin.Context)
+	ProxyDownloadAPI(ctx *gin.Context)
 }
 
 type ImageHandler struct {
@@ -34,5 +35,6 @@ func (h *ImageHandler) RegisterHandlers() {
 		im.POST("", h.imhi.Create)
 		im.PUT("/:image_id", h.imhi.Update)
 		im.DELETE("/:image_id", h.imhi.Delete)
+		im.GET("/:image_id/tags/:tag/download", h.imhi.ProxyDownloadAPI)
 	}
 }

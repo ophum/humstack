@@ -3,6 +3,7 @@ package v0
 import (
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
@@ -138,6 +139,50 @@ func (h *ImageHandler) Delete(ctx *gin.Context) {
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"image": nil,
 	})
+}
+
+func (h *ImageHandler) ProxyDownloadAPI(ctx *gin.Context) {
+	groupID, imID := getIDs(ctx)
+	tag := ctx.Param("tag")
+
+	key := getKey(groupID, imID)
+	h.store.Lock(key)
+	defer h.store.Unlock(key)
+
+	var image system.Image
+	if err := h.store.Get(key, &image); err != nil {
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("image not found"), gin.H{})
+		return
+	}
+
+	imageEntityID, ok := image.Spec.EntityMap[tag]
+	if !ok {
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("image tag not found"), gin.H{})
+		return
+	}
+
+	imageEntityKey := filepath.Join("imageentities", groupID, imageEntityID)
+	var imageEntity system.ImageEntity
+	if err := h.store.Get(imageEntityKey, &imageEntity); err != nil {
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("image entity not found"), gin.H{})
+		return
+	}
+
+	target, ok := imageEntity.Annotations["image-entity-download-host"]
+	if !ok {
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("proxy target not found"), gin.H{})
+		return
+	}
+
+	director := func(req *http.Request) {
+		req.URL.Scheme = "http"
+		req.URL.Host = target
+		req.Host = target
+	}
+
+	proxy := &httputil.ReverseProxy{Director: director}
+	proxy.ServeHTTP(ctx.Writer, ctx.Request)
+
 }
 
 func getIDs(ctx *gin.Context) (groupID, imID string) {
