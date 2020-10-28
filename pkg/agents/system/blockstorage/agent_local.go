@@ -128,7 +128,25 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 
 		srcPath := filepath.Join(a.localImageDirectory, bs.Group, imageEntity)
 
-		// TODO: なかったら別のノードから持ってくるようにする
+		// なかったら別のノードから持ってくるようにする
+		// 動くはず
+		if !fileIsExists(srcPath) {
+			src, err := os.Create(srcPath)
+			if err != nil {
+				return err
+			}
+			defer src.Close()
+
+			stream, err := a.client.SystemV0().Image().Download(bs.Group, bs.Spec.From.BaseImage.ImageName, bs.Spec.From.BaseImage.Tag)
+			if err != nil {
+				return err
+			}
+			defer stream.Close()
+
+			if _, err := io.Copy(src, stream); err != nil {
+				return err
+			}
+		}
 		src, err := os.Open(srcPath)
 		if err != nil {
 			return err

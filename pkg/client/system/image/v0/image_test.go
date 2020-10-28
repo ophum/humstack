@@ -3,7 +3,9 @@ package v0
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"testing"
 
 	"github.com/ophum/humstack/pkg/api/meta"
@@ -103,6 +105,27 @@ func TestImageDelete(t *testing.T) {
 	err := client.Delete(groupID, imageID)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+}
+
+func TestImageDownload(t *testing.T) {
+	client := NewImageClient("http", "localhost", 8080)
+
+	file, err := os.Create("/tmp/test1.img")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	stream, err := client.Download("group1", "test-image-00", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stream.Close()
+
+	if _, err := io.Copy(file, stream); err != nil {
+		log.Fatal(err)
 	}
 
 }

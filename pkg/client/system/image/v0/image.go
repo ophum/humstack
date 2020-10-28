@@ -3,7 +3,9 @@ package v0
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"path/filepath"
 
 	"github.com/go-resty/resty/v2"
@@ -138,6 +140,15 @@ func (c *ImageClient) Delete(groupID, imageID string) error {
 	}
 
 	return nil
+}
+
+func (c *ImageClient) Download(groupID, imageID, tag string) (io.ReadCloser, error) {
+	resp, err := http.Get(fmt.Sprintf("%s/tags/%s/download", c.getPath(groupID, imageID), tag))
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Body, nil
 }
 
 func (c *ImageClient) getPath(groupID, imageID string) string {
