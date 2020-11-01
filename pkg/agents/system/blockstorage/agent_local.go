@@ -17,13 +17,10 @@ import (
 func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error {
 	dirPath := filepath.Join(a.localBlockStorageDirectory, bs.Group, bs.Namespace)
 	path := filepath.Join(dirPath, bs.ID)
-	log.Printf("[BS] %s\n", bs.Name)
-	log.Printf("[BS] ==> %s", path)
 
 	if fileIsExists(path) {
 		// 削除処理
 		if bs.DeleteState == meta.DeleteStateDelete {
-			log.Println("[BS] ==> DELETING")
 			bs.Status.State = system.BlockStorageStateDeleting
 			_, err := a.client.SystemV0().BlockStorage().Update(bs)
 			if err != nil {
@@ -40,13 +37,11 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 				return err
 			}
 
-			log.Println("[BS] ====> DELETED")
 			return nil
 		}
 		if bs.Status.State == "" || bs.Status.State == system.BlockStorageStatePending {
 			bs.Status.State = system.BlockStorageStateActive
 		}
-		log.Println("[BS] ====> ALREADY ACTIVE")
 
 		return setHash(bs)
 	}
@@ -60,7 +55,6 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 
 	switch bs.Spec.From.Type {
 	case system.BlockStorageFromTypeEmpty:
-		log.Println("[BS] ====> CREATE EMPTY IMAGE")
 		command := "qemu-img"
 		args := []string{
 			"create",
@@ -71,33 +65,27 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 		}
 		cmd := exec.Command(command, args...)
 		if _, err := cmd.CombinedOutput(); err != nil {
-			log.Println(err.Error())
 			return err
 		}
 	case system.BlockStorageFromTypeHTTP:
-		log.Printf("[BS] ====> DOWNLOAD: %s\n", bs.Spec.From.HTTP.URL)
 		res, err := http.Get(bs.Spec.From.HTTP.URL)
 		if err != nil {
-			log.Println(err)
 			return err
 		}
 		defer res.Body.Close()
 
 		file, err := os.Create(path)
 		if err != nil {
-			log.Println(err)
 			return err
 		}
 
 		_, err = io.Copy(file, res.Body)
 		if err != nil {
-			log.Println(err)
 			return err
 		}
 
 		err = file.Close()
 		if err != nil {
-			log.Println(err)
 			return err
 		}
 
@@ -109,17 +97,13 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 		}
 		cmd := exec.Command(command, args...)
 		if _, err := cmd.CombinedOutput(); err != nil {
-			log.Println(err.Error())
 			return err
 		}
 	case system.BlockStorageFromTypeBaseImage:
-		log.Printf("[BS] Copy from base image.")
 		image, err := a.client.SystemV0().Image().Get(bs.Group, bs.Spec.From.BaseImage.ImageName)
 		if err != nil {
 			return err
 		}
-
-		log.Println(image)
 
 		imageEntity, ok := image.Spec.EntityMap[bs.Spec.From.BaseImage.Tag]
 		if !ok {

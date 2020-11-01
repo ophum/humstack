@@ -1,7 +1,6 @@
 package network
 
 import (
-	"log"
 	"net"
 
 	"github.com/n0stack/n0stack/n0core/pkg/driver/iproute2"
@@ -12,7 +11,6 @@ import (
 
 func syncBridgeNetwork(network *system.Network) error {
 	bridgeName := utils.GenerateName("hum-br-", network.Group+network.Namespace+network.ID)
-	log.Printf("create bridge `%s`\n", bridgeName)
 	br, err := iproute2.NewBridge(bridgeName)
 	if err != nil {
 		return err

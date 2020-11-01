@@ -1,22 +1,24 @@
 package node
 
 import (
-	"log"
 	"time"
 
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
+	"go.uber.org/zap"
 )
 
 type NodeAgent struct {
 	client   *client.Clients
 	NodeInfo *system.Node
+	logger   *zap.Logger
 }
 
-func NewNodeAgent(node system.Node, client *client.Clients) *NodeAgent {
+func NewNodeAgent(node system.Node, client *client.Clients, logger *zap.Logger) *NodeAgent {
 	return &NodeAgent{
 		NodeInfo: &node,
 		client:   client,
+		logger:   logger,
 	}
 }
 
@@ -30,14 +32,22 @@ func (a *NodeAgent) Run() {
 		case <-ticker.C:
 			node, err := a.client.SystemV0().Node().Get(a.NodeInfo.Name)
 			if err != nil {
-				log.Println(err)
+				a.logger.Error(
+					"get node",
+					zap.String("msg", err.Error()),
+					zap.Time("time", time.Now()),
+				)
 				continue
 			}
 
 			if node.Name == "" {
 				node, err = a.client.SystemV0().Node().Create(a.NodeInfo)
 				if err != nil {
-					log.Println(err)
+					a.logger.Error(
+						"create node",
+						zap.String("msg", err.Error()),
+						zap.Time("time", time.Now()),
+					)
 					continue
 				}
 
@@ -48,7 +58,11 @@ func (a *NodeAgent) Run() {
 				node.Status.State = system.NodeStateReady
 				node, err = a.client.SystemV0().Node().Update(node)
 				if err != nil {
-					log.Println(err)
+					a.logger.Error(
+						"update node",
+						zap.String("msg", err.Error()),
+						zap.Time("time", time.Now()),
+					)
 					continue
 				}
 			}

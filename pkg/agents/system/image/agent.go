@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -14,10 +13,12 @@ import (
 	"github.com/ophum/humstack/pkg/agents/system/blockstorage"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
+	"go.uber.org/zap"
 )
 
 type ImageAgent struct {
 	client                     *client.Clients
+	logger                     *zap.Logger
 	nodeName                   string
 	config                     *ImageAgentConfig
 	localImageDirectory        string
@@ -32,13 +33,18 @@ const (
 	ImageEntityV0ImageEntityTypeLocal = "Local"
 )
 
-func NewImageAgent(client *client.Clients, config *ImageAgentConfig) *ImageAgent {
+func NewImageAgent(client *client.Clients, config *ImageAgentConfig, logger *zap.Logger) *ImageAgent {
 	nodeName, err := os.Hostname()
 	if err != nil {
-		log.Fatal(err)
+		logger.Panic(
+			"get hostname",
+			zap.String("msg", err.Error()),
+			zap.Time("time", time.Now()),
+		)
 	}
 	return &ImageAgent{
 		client:                     client,
+		logger:                     logger,
 		nodeName:                   nodeName,
 		config:                     config,
 		localImageDirectory:        config.ImageDirPath,
@@ -56,19 +62,26 @@ func (a *ImageAgent) Run() {
 		case <-ticker.C:
 			grList, err := a.client.CoreV0().Group().List()
 			if err != nil {
-				log.Println(err)
+				a.logger.Error(
+					"get group list",
+					zap.String("msg", err.Error()),
+					zap.Time("time", time.Now()),
+				)
 				continue
 			}
 
 			for _, group := range grList {
 				imageEntityList, err := a.client.SystemV0().ImageEntity().List(group.ID)
 				if err != nil {
-					log.Println(err)
+					a.logger.Error(
+						"get imageentity list",
+						zap.String("msg", err.Error()),
+						zap.Time("time", time.Now()),
+					)
 					continue
 				}
 
 				for _, imageEntity := range imageEntityList {
-					log.Println("imageEntity: ", imageEntity)
 					oldHash := imageEntity.ResourceHash
 					bs, err := a.client.SystemV0().BlockStorage().Get(
 						imageEntity.Group,
@@ -76,6 +89,11 @@ func (a *ImageAgent) Run() {
 						imageEntity.Spec.Source.BlockStorageID)
 
 					if err != nil {
+						a.logger.Error(
+							"get blockstorage list",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()),
+						)
 						continue
 					}
 
@@ -83,9 +101,6 @@ func (a *ImageAgent) Run() {
 
 					// 別のノードのBSの場合は何もしない
 					if nodeName != a.nodeName {
-						log.Println(nodeName)
-						log.Println(a.nodeName)
-						log.Println("ImageEntity: other node")
 						continue
 					}
 
@@ -107,7 +122,11 @@ func (a *ImageAgent) Run() {
 					switch entityType {
 					case ImageEntityV0ImageEntityTypeLocal:
 						if err := a.syncLocalImageEntity(imageEntity, bs); err != nil {
-							log.Println(err)
+							a.logger.Error(
+								"sync local imageentity",
+								zap.String("msg", err.Error()),
+								zap.Time("time", time.Now()),
+							)
 							continue
 						}
 					}
@@ -117,11 +136,14 @@ func (a *ImageAgent) Run() {
 					}
 
 					if _, err := a.client.SystemV0().ImageEntity().Update(imageEntity); err != nil {
-						log.Println(err)
+						a.logger.Error(
+							"update imageentity",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()),
+						)
 						continue
 					}
 				}
-
 			}
 		}
 	}

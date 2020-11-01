@@ -4,12 +4,12 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
+	"go.uber.org/zap"
 )
 
 type BlockStorageAgent struct {
@@ -17,6 +17,7 @@ type BlockStorageAgent struct {
 	config                     *BlockStorageAgentConfig
 	localBlockStorageDirectory string
 	localImageDirectory        string
+	logger                     *zap.Logger
 }
 
 const (
@@ -28,12 +29,13 @@ const (
 	BlockStorageV0BlockStorageTypeLocal = "Local"
 )
 
-func NewBlockStorageAgent(client *client.Clients, config *BlockStorageAgentConfig) *BlockStorageAgent {
+func NewBlockStorageAgent(client *client.Clients, config *BlockStorageAgentConfig, logger *zap.Logger) *BlockStorageAgent {
 	return &BlockStorageAgent{
 		client:                     client,
 		config:                     config,
 		localBlockStorageDirectory: config.BlockStorageDirPath,
 		localImageDirectory:        config.ImageDirPath,
+		logger:                     logger,
 	}
 }
 
@@ -43,7 +45,10 @@ func (a *BlockStorageAgent) Run() {
 
 	nodeName, err := os.Hostname()
 	if err != nil {
-		log.Fatal(err)
+		a.logger.Panic(
+			"get hostname",
+			zap.String("msg", err.Error()),
+			zap.Time("time", time.Now()))
 	}
 
 	for {
@@ -51,26 +56,42 @@ func (a *BlockStorageAgent) Run() {
 		case <-ticker.C:
 			grList, err := a.client.CoreV0().Group().List()
 			if err != nil {
-				log.Println("[BS] %s", err.Error())
+				a.logger.Error(
+					"get group list",
+					zap.String("msg", err.Error()),
+					zap.Time("time", time.Now()),
+				)
 				continue
 			}
 			for _, group := range grList {
 				nsList, err := a.client.CoreV0().Namespace().List(group.ID)
 				if err != nil {
-					log.Println("[BS] %s", err.Error())
+					a.logger.Error(
+						"get namespace list",
+						zap.String("msg", err.Error()),
+						zap.Time("time", time.Now()),
+					)
 					continue
 				}
 
 				for _, ns := range nsList {
 					bsList, err := a.client.SystemV0().BlockStorage().List(group.ID, ns.ID)
 					if err != nil {
-						log.Printf("[BS] %s", err.Error())
+						a.logger.Error(
+							"get blockstorage list",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()),
+						)
 						continue
 					}
 
 					vmList, err := a.client.SystemV0().VirtualMachine().List(group.ID, ns.ID)
 					if err != nil {
-						log.Printf("[BS] %s", err.Error())
+						a.logger.Error(
+							"get virtualmahine list",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()),
+						)
 						continue
 					}
 					usedBSIDs := []string{}
@@ -89,8 +110,6 @@ func (a *BlockStorageAgent) Run() {
 
 							oldState := bs.Status.State
 							bs.Status.State = system.BlockStorageStateActive
-							log.Println("====")
-							log.Println(usedBSIDs)
 							for i, usedID := range usedBSIDs {
 								if bs.ID == usedID {
 									bs.Status.State = system.BlockStorageStateUsed
@@ -98,13 +117,15 @@ func (a *BlockStorageAgent) Run() {
 									break
 								}
 							}
-							log.Println(usedBSIDs)
-							log.Println("====")
 
 							if bs.Status.State != oldState {
 								bs, err = a.client.SystemV0().BlockStorage().Update(bs)
 								if err != nil {
-									log.Println(err)
+									a.logger.Error(
+										"update blockstorage",
+										zap.String("msg", err.Error()),
+										zap.Time("time", time.Now()),
+									)
 									continue
 								}
 							}
@@ -118,7 +139,11 @@ func (a *BlockStorageAgent) Run() {
 
 							err = a.syncLocalBlockStorage(bs)
 							if err != nil {
-								log.Println(err)
+								a.logger.Error(
+									"sync local blockstorage",
+									zap.String("msg", err.Error()),
+									zap.Time("time", time.Now()),
+								)
 								continue
 							}
 						}
@@ -129,7 +154,11 @@ func (a *BlockStorageAgent) Run() {
 
 						_, err := a.client.SystemV0().BlockStorage().Update(bs)
 						if err != nil {
-							log.Println(err)
+							a.logger.Error(
+								"update blockstorage",
+								zap.String("msg", err.Error()),
+								zap.Time("time", time.Now()),
+							)
 							continue
 						}
 					}

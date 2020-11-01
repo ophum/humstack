@@ -11,12 +11,14 @@ import (
 
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
+	"go.uber.org/zap"
 )
 
 type NetworkAgent struct {
 	client *client.Clients
 	config *NetworkAgentConfig
 	node   string
+	logger *zap.Logger
 }
 
 const (
@@ -29,7 +31,7 @@ const (
 	NetworkV0NetworkTypeBridge = "Bridge"
 )
 
-func NewNetworkAgent(client *client.Clients, config *NetworkAgentConfig) *NetworkAgent {
+func NewNetworkAgent(client *client.Clients, config *NetworkAgentConfig, logger *zap.Logger) *NetworkAgent {
 	node, err := os.Hostname()
 	if err != nil {
 		log.Fatal(err)
@@ -38,6 +40,7 @@ func NewNetworkAgent(client *client.Clients, config *NetworkAgentConfig) *Networ
 		client: client,
 		config: config,
 		node:   node,
+		logger: logger,
 	}
 }
 
@@ -50,19 +53,33 @@ func (a *NetworkAgent) Run() {
 		case <-ticker.C:
 			grList, err := a.client.CoreV0().Group().List()
 			if err != nil {
-				log.Printf("[NET] %s", err.Error())
+				a.logger.Error(
+					"get group list",
+					zap.String("msg", err.Error()),
+					zap.Time("time", time.Now()),
+				)
 				continue
 			}
 
 			for _, group := range grList {
 				nsList, err := a.client.CoreV0().Namespace().List(group.ID)
 				if err != nil {
+					a.logger.Error(
+						"get namespace list",
+						zap.String("msg", err.Error()),
+						zap.Time("time", time.Now()),
+					)
 					continue
 				}
 
 				for _, ns := range nsList {
 					vmList, err := a.client.SystemV0().VirtualMachine().List(group.ID, ns.ID)
 					if err != nil {
+						a.logger.Error(
+							"get virtualmachine list",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()),
+						)
 						continue
 					}
 					attachedInterfacesToNet := map[string]map[string]system.VirtualMachineNIC{}
@@ -81,6 +98,14 @@ func (a *NetworkAgent) Run() {
 					}
 
 					vrList, err := a.client.SystemV0().VirtualRouter().List(group.ID, ns.ID)
+					if err != nil {
+						a.logger.Error(
+							"get virtualrouter list",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()),
+						)
+						continue
+					}
 					for _, vr := range vrList {
 						if vr.Status.State != system.VirtualRouterStateRunning {
 							continue
@@ -100,6 +125,11 @@ func (a *NetworkAgent) Run() {
 
 					netList, err := a.client.SystemV0().Network().List(group.ID, ns.ID)
 					if err != nil {
+						a.logger.Error(
+							"get network list",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()),
+						)
 						continue
 					}
 
@@ -110,36 +140,46 @@ func (a *NetworkAgent) Run() {
 						case NetworkV0NetworkTypeBridge:
 							err = syncBridgeNetwork(net)
 							if err != nil {
-								log.Println("error sync bridge network")
-								log.Println(err)
+								a.logger.Error(
+									"sync bridge network",
+									zap.String("msg", err.Error()),
+									zap.Time("time", time.Now()),
+								)
 								continue
 							}
 						case NetworkV0NetworkTypeVXLAN:
 							err = a.syncVXLANNetwork(net)
 							if err != nil {
-								log.Println("error sync vxlan network")
-								log.Println(err)
+								a.logger.Error(
+									"sync vxlan network",
+									zap.String("msg", err.Error()),
+									zap.Time("time", time.Now()),
+								)
 								continue
 							}
 						case NetworkV0NetworkTypeVLAN:
 							err = a.syncVLANNetwork(net)
 							if err != nil {
-								log.Println("error sync vlan network")
-								log.Println(err)
+								a.logger.Error(
+									"sync vlan network",
+									zap.String("msg", err.Error()),
+									zap.Time("time", time.Now()),
+								)
 								continue
 							}
 
 						}
 
 						if net.ResourceHash == oldHash {
-							log.Println("no update")
 							continue
 						}
-						log.Println("update store")
 						_, err = a.client.SystemV0().Network().Update(net)
 						if err != nil {
-							log.Println("error Update store")
-							log.Println(err)
+							a.logger.Error(
+								"update network",
+								zap.String("msg", err.Error()),
+								zap.Time("time", time.Now()),
+							)
 							continue
 						}
 					}

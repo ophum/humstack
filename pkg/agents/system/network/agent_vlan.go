@@ -2,7 +2,6 @@ package network
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -16,7 +15,6 @@ func (a *NetworkAgent) syncVLANNetwork(network *system.Network) error {
 
 	bridgeName := utils.GenerateName("hum-br-", network.Group+network.Namespace+network.ID)
 	vlanName := a.config.VLAN.DevName + "." + network.Spec.ID
-	log.Printf("create vlan %s and bridge %s\n", vlanName, bridgeName)
 
 	// vlan idがすでに別のbridgeに接続されているかチェックする
 	vlanLink, err := netlink.LinkByName(vlanName)

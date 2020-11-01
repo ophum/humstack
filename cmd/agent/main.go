@@ -14,6 +14,7 @@ import (
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
@@ -57,6 +58,11 @@ func init() {
 }
 
 func main() {
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	client := client.NewClients(config.ApiServerAddress, config.ApiServerPort)
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -72,17 +78,40 @@ func main() {
 			LimitMemory: config.LimitMemory,
 			LimitVcpus:  config.LimitVcpus,
 		},
-	}, client)
+	}, client,
+		logger.With(zap.Namespace("NodeAgent")),
+	)
 
-	netAgent := network.NewNetworkAgent(client, &config.NetworkAgentConfig)
+	netAgent := network.NewNetworkAgent(
+		client,
+		&config.NetworkAgentConfig,
+		logger.With(zap.Namespace("NetworkAgent")),
+	)
 
-	bsAgent := blockstorage.NewBlockStorageAgent(client, &config.BlockStorageAgentConfig)
+	bsAgent := blockstorage.NewBlockStorageAgent(
+		client,
+		&config.BlockStorageAgentConfig,
+		logger.With(zap.Namespace("BlockStorageAgent")),
+	)
 
-	imAgent := image.NewImageAgent(client, &config.ImageAgentConfig)
+	imAgent := image.NewImageAgent(
+		client,
+		&config.ImageAgentConfig,
+		logger.With(zap.Namespace("ImageAgent")),
+	)
 
-	vmAgent := virtualmachine.NewVirtualMachineAgent(client)
+	vmAgent := virtualmachine.NewVirtualMachineAgent(
+		client,
+		logger.With(zap.Namespace("VirtualMachineAgent")),
+	)
 
-	vrAgent := virtualrouter.NewVirtualRouterAgent(client, "exBr", "10.0.0.0/24", []string{"10.0.0.1", "10.0.0.2"})
+	vrAgent := virtualrouter.NewVirtualRouterAgent(
+		client,
+		"exBr",
+		"10.0.0.0/24",
+		[]string{"10.0.0.1", "10.0.0.2"},
+		logger.With(zap.Namespace("VirtualRouterAgent")),
+	)
 
 	log.Println(config.ImageAgentConfig.DownloadAPI)
 	go nodeAgent.Run()

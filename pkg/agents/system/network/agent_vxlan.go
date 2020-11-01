@@ -1,7 +1,6 @@
 package network
 
 import (
-	"log"
 	"net"
 	"strconv"
 
@@ -16,7 +15,6 @@ func (a *NetworkAgent) syncVXLANNetwork(network *system.Network) error {
 
 	bridgeName := utils.GenerateName("hum-br-", network.Group+network.Namespace+network.ID)
 	vxlanName := utils.GenerateName("hum-vx-", network.Group+network.Namespace+network.ID)
-	log.Printf("create vxlan %s and bridge %s\n", vxlanName, bridgeName)
 
 	// 作成だけ
 	_, err := iproute2.NewBridge(bridgeName)

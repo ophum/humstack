@@ -3,13 +3,14 @@ package image
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 func (a *ImageAgent) DownloadAPI(config *ImageAgentDownloadAPIConfig) error {
@@ -47,7 +48,12 @@ func (a *ImageAgent) DownloadAPI(config *ImageAgentDownloadAPIConfig) error {
 
 		_, err = io.Copy(ctx.Writer, file)
 		if err != nil {
-			log.Println(err)
+			a.logger.Error(
+				"image downloader",
+				zap.String("msg", err.Error()),
+				zap.Time("time", time.Now()),
+			)
+			ctx.String(http.StatusInternalServerError, "%v", err)
 		}
 	})
 

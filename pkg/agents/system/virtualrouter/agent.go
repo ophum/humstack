@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,12 +14,13 @@ import (
 	"github.com/ophum/humstack/pkg/agents/system/network/utils"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
-	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
+	"go.uber.org/zap"
 )
 
 type VirtualRouterAgent struct {
 	client *client.Clients
+	logger *zap.Logger
 
 	externalBridge  string
 	floatingIPCIDR  string
@@ -31,9 +31,10 @@ const (
 	VirtualRouterV0AnnotationNodeName = "virtualrouterv0/node_name"
 )
 
-func NewVirtualRouterAgent(client *client.Clients, externalBridge string, floatingIPCIDR string, usedFloatingIPs []string) *VirtualRouterAgent {
+func NewVirtualRouterAgent(client *client.Clients, externalBridge string, floatingIPCIDR string, usedFloatingIPs []string, logger *zap.Logger) *VirtualRouterAgent {
 	return &VirtualRouterAgent{
 		client:          client,
+		logger:          logger,
 		externalBridge:  externalBridge,
 		floatingIPCIDR:  floatingIPCIDR,
 		usedFloatingIPs: map[string]bool{},
@@ -46,7 +47,11 @@ func (a *VirtualRouterAgent) Run() {
 
 	nodeName, err := os.Hostname()
 	if err != nil {
-		log.Fatal(err)
+		a.logger.Panic(
+			"get hostname",
+			zap.String("msg", err.Error()),
+			zap.Time("time", time.Now()),
+		)
 	}
 
 	for {
@@ -54,45 +59,63 @@ func (a *VirtualRouterAgent) Run() {
 		case <-ticker.C:
 			grList, err := a.client.CoreV0().Group().List()
 			if err != nil {
-				log.Println(err)
+				a.logger.Error(
+					"get group list",
+					zap.String("msg", err.Error()),
+					zap.Time("time", time.Now()),
+				)
 				continue
 			}
 
 			for _, group := range grList {
 				nsList, err := a.client.CoreV0().Namespace().List(group.ID)
 				if err != nil {
-					log.Println(err)
+					a.logger.Error(
+						"get namespace list",
+						zap.String("msg", err.Error()),
+						zap.Time("time", time.Now()),
+					)
 					continue
 				}
 
 				for _, ns := range nsList {
 					vrList, err := a.client.SystemV0().VirtualRouter().List(group.ID, ns.ID)
 					if err != nil {
-						log.Println(err)
+						a.logger.Error(
+							"get virtualrouter list",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()),
+						)
 						continue
 					}
 
 					for _, vr := range vrList {
 						oldHash := vr.ResourceHash
 						if vr.Annotations[VirtualRouterV0AnnotationNodeName] != nodeName {
-							log.Println("continue")
 							continue
 						}
 
 						err = a.syncVirtualRouter(vr)
 						if err != nil {
-							log.Println(err)
+							a.logger.Error(
+								"sync virtualrouter",
+								zap.String("msg", err.Error()),
+								zap.Time("time", time.Now()),
+							)
 							continue
 						}
 
 						if vr.ResourceHash == oldHash {
-							log.Printf("vrouter(`%s`) no update\n", vr.ID)
 							continue
 						}
 
 						_, err := a.client.SystemV0().VirtualRouter().Update(vr)
 						if err != nil {
-							log.Println(err)
+							a.logger.Error(
+								"update virtualrouter",
+								zap.String("msg", err.Error()),
+								zap.Time("time", time.Now()),
+							)
 							continue
 						}
 					}
@@ -104,34 +127,28 @@ func (a *VirtualRouterAgent) Run() {
 
 func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 
-	log.Println("[VIRTUAL ROUTER]")
 	netnsName := utils.GenerateName("netns-", vr.Group+vr.Namespace+vr.ID)
 	rtExVeth := utils.GenerateName("hrt-ex-", netnsName)
 	exRtVeth := utils.GenerateName("hex-rt-", netnsName)
 
 	natRule := []string{"*nat"}
 	if !netnsIsExists(netnsName) {
-		log.Println("[VR] netns add")
 		if err := netnsAdd(netnsName); err != nil {
 			return err
 		}
 
-		log.Println("[VR] link add")
 		if err := ipLinkAddVeth(rtExVeth, exRtVeth); err != nil {
 			return err
 		}
 
-		log.Println("[VR] set netns")
 		if err := ipLinkSetNetNS(rtExVeth, netnsName); err != nil {
 			return err
 		}
 
-		log.Println("[VR] set master")
 		if err := ipLinkSetMaster(exRtVeth, a.externalBridge); err != nil {
 			return err
 		}
 
-		log.Println("[VR] ip address add rtExVeth")
 		netnsExec(netnsName, []string{
 			"ip", "a", "add", vr.Spec.NATGatewayIP, "dev", rtExVeth,
 		})
@@ -164,10 +181,8 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 
 	natGatewayIP := strings.Split(vr.Spec.NATGatewayIP, "/")[0]
 	for _, nic := range vr.Spec.NICs {
-		log.Println(nic.NetworkID)
 		rtBrVeth := utils.GenerateName("hrt-br-", netnsName+nic.NetworkID)
 		brRtVeth := utils.GenerateName("hbr-rt-", netnsName+nic.NetworkID)
-		log.Println(vr.Group + vr.Namespace + nic.NetworkID)
 		brName := utils.GenerateName("hum-br-", vr.Group+vr.Namespace+nic.NetworkID)
 		_, err := netlink.LinkByName(brRtVeth)
 		if err != nil {
@@ -180,7 +195,6 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 		}
 
 		if _, err := netlink.LinkByName(brRtVeth); err == nil {
-			log.Println("ip link master")
 			if err := ipLinkSetMaster(brRtVeth, brName); err != nil {
 				return err
 			}
@@ -202,11 +216,9 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 		err = netnsExec(netnsName, []string{
 			"ip", "route", "add", "default", "via", vr.Spec.ExternalGateway,
 		})
-		log.Println(errors.Wrap(err, "adding default route in netns"))
 	}
 
 	for _, rule := range vr.Spec.DNATRules {
-		log.Println("dnat rule")
 		natRule = append(natRule,
 			fmt.Sprintf("-A PREROUTING -p tcp -i %s -d %s --dport %d -j DNAT --to-destination %s:%d",
 				rtExVeth,
@@ -217,21 +229,15 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 
 	natRule = append(natRule, "COMMIT")
 	natFile := strings.Join(natRule, "\n")
-	log.Println(natFile)
 	cmd := exec.Command("ip", "netns", "exec", netnsName, "iptables-restore")
 	w, _ := cmd.StdinPipe()
 	_, err := io.WriteString(w, natFile+"\n")
 	w.Close()
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 
-	log.Println("exec iptables-restore in netns")
-	out, err := cmd.CombinedOutput()
-	log.Println(string(out))
-	if err != nil {
-		log.Println(err)
+	if _, err := cmd.CombinedOutput(); err != nil {
 		return err
 	}
 
@@ -260,7 +266,6 @@ func ipLinkSetNetNS(linkName, netnsName string) error {
 }
 
 func ipLinkSetMaster(linkName, brName string) error {
-	log.Println("ip link set up " + linkName + " master " + brName)
 	cmd := exec.Command("ip", "link", "set", "up", linkName, "master", brName)
 	return cmd.Run()
 }
@@ -279,7 +284,6 @@ func netnsExec(name string, command []string) error {
 	command = append([]string{
 		"netns", "exec", name,
 	}, command...)
-	log.Println(command)
 	cmd := exec.Command("ip", command...)
 	return cmd.Run()
 }

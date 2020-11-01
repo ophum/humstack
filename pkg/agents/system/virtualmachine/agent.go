@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
 	"os"
@@ -20,10 +19,13 @@ import (
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
 	"github.com/ophum/humstack/pkg/utils/cloudinit"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 type VirtualMachineAgent struct {
 	client *client.Clients
+	logger *zap.Logger
 
 	vncDisplayMap map[int32]bool
 }
@@ -32,9 +34,10 @@ const (
 	VirtualMachineV0AnnotationNodeName = "virtualmachinev0/node_name"
 )
 
-func NewVirtualMachineAgent(client *client.Clients) *VirtualMachineAgent {
+func NewVirtualMachineAgent(client *client.Clients, logger *zap.Logger) *VirtualMachineAgent {
 	return &VirtualMachineAgent{
 		client:        client,
+		logger:        logger,
 		vncDisplayMap: map[int32]bool{},
 	}
 }
@@ -45,7 +48,11 @@ func (a *VirtualMachineAgent) Run() {
 
 	nodeName, err := os.Hostname()
 	if err != nil {
-		log.Fatal(err)
+		a.logger.Panic(
+			"get hostname",
+			zap.String("msg", err.Error()),
+			zap.Time("time", time.Now()),
+		)
 	}
 
 	for {
@@ -53,21 +60,33 @@ func (a *VirtualMachineAgent) Run() {
 		case <-ticker.C:
 			grList, err := a.client.CoreV0().Group().List()
 			if err != nil {
-				log.Println(err)
+				a.logger.Error(
+					"get group list",
+					zap.String("msg", err.Error()),
+					zap.Time("time", time.Now()),
+				)
 				continue
 			}
 
 			for _, group := range grList {
 				nsList, err := a.client.CoreV0().Namespace().List(group.ID)
 				if err != nil {
-					log.Println(err)
+					a.logger.Error(
+						"get namespace list",
+						zap.String("msg", err.Error()),
+						zap.Time("time", time.Now()),
+					)
 					continue
 				}
 
 				for _, ns := range nsList {
 					vmList, err := a.client.SystemV0().VirtualMachine().List(group.ID, ns.ID)
 					if err != nil {
-						log.Println(err)
+						a.logger.Error(
+							"get virtualmachine list",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()),
+						)
 						continue
 					}
 
@@ -78,18 +97,25 @@ func (a *VirtualMachineAgent) Run() {
 						}
 						err = a.syncVirtualMachine(vm)
 						if err != nil {
-							log.Println(err)
+							a.logger.Error(
+								"sync virtualmachine",
+								zap.String("msg", err.Error()),
+								zap.Time("time", time.Now()),
+							)
 							continue
 						}
 
 						if vm.ResourceHash == oldHash {
-							log.Printf("vm(`%s`) no update.\n", vm.ID)
 							continue
 						}
 
 						_, err := a.client.SystemV0().VirtualMachine().Update(vm)
 						if err != nil {
-							log.Println(err)
+							a.logger.Error(
+								"update virtualmachine",
+								zap.String("msg", err.Error()),
+								zap.Time("time", time.Now()),
+							)
 							continue
 						}
 					}
@@ -321,12 +347,8 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 	args = append(args, disks...)
 	args = append(args, nics...)
 
-	log.Printf("create vm `%s`", vm.ID)
-	log.Println(command, args)
-
 	cmd := exec.Command(command, args...)
 	if _, err := cmd.CombinedOutput(); err != nil {
-		log.Println(err.Error())
 		return err
 	}
 
@@ -352,11 +374,10 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 	}
 
 	pid, err = getPID(vm.Spec.UUID)
-
 	if err != nil {
-		log.Println(err.Error())
-		return err
+		return errors.Wrap(err, "get pid")
 	}
+
 	vm.Annotations["virtualmachinev0/pid"] = fmt.Sprint(pid)
 	vm.Annotations["virtualmachinev0/vnc_display_number"] = fmt.Sprint(displayNumber)
 	vm.Status.State = system.VirtualMachineStateRunning
@@ -364,10 +385,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 }
 
 func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) error {
-	log.Printf("[VM] %s/%s", vm.Namespace, vm.ID)
 	if vm.DeleteState == meta.DeleteStateDelete {
-		log.Println("[VM] ==> DELETING")
-		log.Println("[VM] ====> POWER OFF")
 		err := a.powerOffVirtualMachine(vm)
 		if err != nil {
 			return err
@@ -377,18 +395,15 @@ func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) erro
 		if err != nil {
 			return err
 		}
-		log.Println("[VM] ====> DELETED")
 		return nil
 	}
 	switch vm.Spec.ActionState {
 	case system.VirtualMachineActionStatePowerOn:
-		log.Println("[VM] ==> POWER ON")
 		err := a.powerOnVirtualMachine(vm)
 		if err != nil {
 			return err
 		}
 	case system.VirtualMachineActionStatePowerOff:
-		log.Println("[VM] ==> POWER OFF")
 		err := a.powerOffVirtualMachine(vm)
 		if err != nil {
 			return err
@@ -408,7 +423,6 @@ func getPID(uuid string) (int64, error) {
 		fmt.Sprintf(`ps aux | grep qemu | grep -v grep | grep '%s' | awk '{print $2}' | tr -d '\n'`, uuid),
 	}
 
-	log.Println(command, args)
 	cmd := exec.Command(command, args...)
 	out, err := cmd.CombinedOutput()
 	if string(out) == "" || err != nil {
