@@ -349,7 +349,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 
 	cmd := exec.Command(command, args...)
 	if _, err := cmd.CombinedOutput(); err != nil {
-		return err
+		return errors.Wrap(err, fmt.Sprint(command, args))
 	}
 
 	for i, tapName := range tapNames {
@@ -388,12 +388,17 @@ func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) erro
 	if vm.DeleteState == meta.DeleteStateDelete {
 		err := a.powerOffVirtualMachine(vm)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "poweroff vm")
+		}
+
+		path := fmt.Sprintf("./virtualmachines/%s/%s/%s/", vm.Group, vm.Namespace, vm.Spec.UUID)
+		if err := os.RemoveAll(path); err != nil {
+			return errors.Wrap(err, "delete cloudinit data")
 		}
 
 		err = a.client.SystemV0().VirtualMachine().Delete(vm.Group, vm.Namespace, vm.ID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "delete client vm")
 		}
 		return nil
 	}
@@ -401,12 +406,12 @@ func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) erro
 	case system.VirtualMachineActionStatePowerOn:
 		err := a.powerOnVirtualMachine(vm)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "poweron vm")
 		}
 	case system.VirtualMachineActionStatePowerOff:
 		err := a.powerOffVirtualMachine(vm)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "poweroff vm")
 		}
 	}
 	return setHash(vm)
