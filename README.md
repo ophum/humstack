@@ -41,6 +41,12 @@ sudo ./agent --config config.yaml
 apiServerAddress: localhost
 apiServerPort: 8080
 
+# agentのモード
+# Core: corev0のリソース削除用(1ノードで動かすだけでよい)
+# System: systemv0のリソース作成・削除用(各computeノードで動作させる)
+# All: Singleノードで動作させる場合にCoreとSystemの両方を動かす
+agentMode: All
+
 # agentが動作するノードのリソース量(使われていない)
 limitMemory: 8G
 limitVcpus: 8000m
