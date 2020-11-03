@@ -58,6 +58,8 @@ var applyCmd = &cobra.Command{
 						log.Fatal(err)
 					}
 				}
+				// 初期化しておく
+				item = meta.Object{}
 			}
 		}
 	},
