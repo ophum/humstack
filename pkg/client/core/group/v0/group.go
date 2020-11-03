@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/ophum/humstack/pkg/api/core"
+	"github.com/ophum/humstack/pkg/api/meta"
 )
 
 type GroupClient struct {
@@ -134,6 +135,18 @@ func (c *GroupClient) Delete(groupID string) error {
 	}
 
 	return nil
+}
+
+func (c *GroupClient) DeleteState(groupID string) error {
+	group, err := c.Get(groupID)
+	if err != nil {
+		return err
+	}
+
+	group.DeleteState = meta.DeleteStateDelete
+
+	_, err = c.Update(group)
+	return err
 }
 
 func (c *GroupClient) getPath(path string) string {

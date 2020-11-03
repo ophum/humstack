@@ -12,6 +12,7 @@ import (
 
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
+	"github.com/pkg/errors"
 )
 
 func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error {
@@ -21,6 +22,9 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 	if fileIsExists(path) {
 		// 削除処理
 		if bs.DeleteState == meta.DeleteStateDelete {
+			if bs.Status.State != system.BlockStorageStateActive {
+				return nil
+			}
 			bs.Status.State = system.BlockStorageStateDeleting
 			_, err := a.client.SystemV0().BlockStorage().Update(bs)
 			if err != nil {
@@ -46,6 +50,13 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 		return setHash(bs)
 	}
 
+	// コピー中・ダウンロード中の場合はskip
+	switch bs.Status.State {
+	case system.BlockStorageStateCopying:
+	case system.BlockStorageStateDownloading:
+		return nil
+	}
+
 	if !fileIsExists(dirPath) {
 		err := os.MkdirAll(dirPath, 0755)
 		if err != nil {
@@ -68,6 +79,11 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 			return err
 		}
 	case system.BlockStorageFromTypeHTTP:
+		bs.Status.State = system.BlockStorageStateDownloading
+		if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+			return err
+		}
+
 		res, err := http.Get(bs.Spec.From.HTTP.URL)
 		if err != nil {
 			return err
@@ -96,8 +112,8 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 			withUnitToWithoutUnit(bs.Spec.LimitSize),
 		}
 		cmd := exec.Command(command, args...)
-		if _, err := cmd.CombinedOutput(); err != nil {
-			return err
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return errors.Wrap(err, string(out))
 		}
 	case system.BlockStorageFromTypeBaseImage:
 		image, err := a.client.SystemV0().Image().Get(bs.Group, bs.Spec.From.BaseImage.ImageName)

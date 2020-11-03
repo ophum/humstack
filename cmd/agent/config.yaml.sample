@@ -1,5 +1,6 @@
 apiServerAddress: localhost
 apiServerPort: 8080
+agentMode: All  # All, Core, System
 limitMemory: 8G
 limitVcpus: 8000m
 
@@ -7,12 +8,12 @@ blockStorageAgentConfig:
   blockStorageDirPath: ./blockstorages
   imageDirPath: ./images
   downloadAPI:
-    advertiseAddress: 10.200.5.111
+    advertiseAddress: 192.168.10.3
     listenAddress: 0.0.0.0
     listenPort: 8082
 networkAgentConfig:
   vxlan:
-    devName: eth0
+    devName: enp0s8
     group: 239.0.0.1
   vlan:
     devName: enp0s8
@@ -21,5 +22,5 @@ imageAgentConfig:
   blockStorageDirPath: ./blockstorages
   imageDirPath: ./images
   downloadAPI:
-    advertiseAddress: 10.200.5.111
+    advertiseAddress: 192.168.10.3
     listenPort: 8083

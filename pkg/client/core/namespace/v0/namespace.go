@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/ophum/humstack/pkg/api/core"
+	"github.com/ophum/humstack/pkg/api/meta"
 )
 
 type NamespaceClient struct {
@@ -134,6 +135,18 @@ func (c *NamespaceClient) Delete(groupID, namespaceID string) error {
 	}
 
 	return nil
+}
+
+func (c *NamespaceClient) DeleteState(groupID, namespaceID string) error {
+	ns, err := c.Get(groupID, namespaceID)
+	if err != nil {
+		return err
+	}
+
+	ns.DeleteState = meta.DeleteStateDelete
+
+	_, err = c.Update(ns)
+	return err
 }
 
 func (c *NamespaceClient) getPath(groupID, path string) string {

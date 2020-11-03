@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 )
 
@@ -134,6 +135,18 @@ func (c *NetworkClient) Delete(groupID, namespaceID, networkID string) error {
 	}
 
 	return nil
+}
+
+func (c *NetworkClient) DeleteState(groupID, namespaceID, networkID string) error {
+	net, err := c.Get(groupID, namespaceID, networkID)
+	if err != nil {
+		return err
+	}
+
+	net.DeleteState = meta.DeleteStateDelete
+
+	_, err = c.Update(net)
+	return err
 }
 
 func (c *NetworkClient) getPath(groupID, namespaceID, networkID string) string {
