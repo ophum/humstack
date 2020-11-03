@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/ophum/humstack/pkg/client"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 
 	"github.com/olekukonko/tablewriter"
 )
@@ -23,20 +26,35 @@ var getNodeCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{
-			"Name",
-			"LimitVcpus",
-			"LimitMemory",
-		})
-		for _, n := range nodeList {
-			table.Append([]string{
-				n.Name,
-				n.Spec.LimitVcpus,
-				n.Spec.LimitMemory,
+		switch output {
+		case "json":
+			out, err := json.MarshalIndent(nodeList, "", "  ")
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(string(out))
+		case "yaml":
+			out, err := yaml.Marshal(nodeList)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(string(out))
+		default:
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetHeader([]string{
+				"Name",
+				"LimitVcpus",
+				"LimitMemory",
 			})
-		}
+			for _, n := range nodeList {
+				table.Append([]string{
+					n.Name,
+					n.Spec.LimitVcpus,
+					n.Spec.LimitMemory,
+				})
+			}
 
-		table.Render()
+			table.Render()
+		}
 	},
 }

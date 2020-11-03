@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/ophum/humstack/pkg/client"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 
 	"github.com/olekukonko/tablewriter"
 )
@@ -26,18 +29,33 @@ var getNamespaceCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{
-			"ID",
-			"Name",
-		})
-		for _, n := range nsList {
-			table.Append([]string{
-				n.ID,
-				n.Name,
+		switch output {
+		case "json":
+			out, err := json.MarshalIndent(nsList, "", "  ")
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(string(out))
+		case "yaml":
+			out, err := yaml.Marshal(nsList)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(string(out))
+		default:
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetHeader([]string{
+				"ID",
+				"Name",
 			})
-		}
+			for _, n := range nsList {
+				table.Append([]string{
+					n.ID,
+					n.Name,
+				})
+			}
 
-		table.Render()
+			table.Render()
+		}
 	},
 }
