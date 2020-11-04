@@ -126,24 +126,37 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 			return fmt.Errorf("Image Entity not found")
 		}
 
-		srcPath := filepath.Join(a.localImageDirectory, bs.Group, imageEntity)
+		srcDirPath := filepath.Join(a.localImageDirectory, bs.Group)
+		if !fileIsExists(srcDirPath) {
+			err := os.MkdirAll(srcDirPath, 0755)
+			if err != nil {
+				return err
+			}
+		}
+		srcPath := filepath.Join(srcDirPath, imageEntity)
 
 		// なかったら別のノードから持ってくるようにする
 		// 動くはず
 		if !fileIsExists(srcPath) {
-			src, err := os.Create(srcPath)
-			if err != nil {
-				return err
-			}
-			defer src.Close()
+			err := func() error {
+				src, err := os.Create(srcPath)
+				if err != nil {
+					return err
+				}
+				defer src.Close()
 
-			stream, err := a.client.SystemV0().Image().Download(bs.Group, bs.Spec.From.BaseImage.ImageName, bs.Spec.From.BaseImage.Tag)
-			if err != nil {
-				return err
-			}
-			defer stream.Close()
+				stream, err := a.client.SystemV0().Image().Download(bs.Group, bs.Spec.From.BaseImage.ImageName, bs.Spec.From.BaseImage.Tag)
+				if err != nil {
+					return err
+				}
+				defer stream.Close()
 
-			if _, err := io.Copy(src, stream); err != nil {
+				if _, err := io.Copy(src, stream); err != nil {
+					return err
+				}
+				return nil
+			}()
+			if err != nil {
 				return err
 			}
 		}
@@ -181,7 +194,11 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 	}
 
 	bs.Annotations["bs-download-host"] = fmt.Sprintf("%s:%d", a.config.DownloadAPI.AdvertiseAddress, a.config.DownloadAPI.ListenPort)
-	if bs.Status.State == "" || bs.Status.State == system.BlockStorageStatePending {
+	// ここに来た時点で処理は終わっているのでActiveにする
+	if bs.Status.State == "" ||
+		bs.Status.State == system.BlockStorageStatePending ||
+		bs.Status.State == system.BlockStorageStateCopying ||
+		bs.Status.State == system.BlockStorageStateDownloading {
 		bs.Status.State = system.BlockStorageStateActive
 	}
 	return setHash(bs)
