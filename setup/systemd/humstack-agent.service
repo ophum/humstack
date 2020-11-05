@@ -1,0 +1,17 @@
+[Unit]
+Description=humstack-agent: humstack worker node
+Documentation=https://github.com/ophum/humstack
+
+[Service]
+After=humstack-api.service
+ExecStart=/usr/bin/humstack-agent --config config.yaml
+WorkingDirectory=/var/lib/humstack
+Restart=always
+StartLimitInterval=0
+RestartSec=10
+KillMode=process
+TasksMax=infinity
+
+[Install]
+WantedBy=multi-user.target
+
