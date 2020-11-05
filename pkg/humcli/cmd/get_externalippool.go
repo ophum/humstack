@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/ophum/humstack/pkg/client"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 
 	"github.com/olekukonko/tablewriter"
 )
@@ -26,22 +29,37 @@ var getExternalIPPoolCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{
-			"Name",
-			"Bridge",
-			"IPv4 CIDR",
-			"IPv6 CIDR",
-		})
-		for _, eippool := range eippoolList {
-			table.Append([]string{
-				eippool.Name,
-				eippool.Spec.BridgeName,
-				eippool.Spec.IPv4CIDR,
-				eippool.Spec.IPv6CIDR,
+		switch output {
+		case "json":
+			out, err := json.MarshalIndent(eippoolList, "", "  ")
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(string(out))
+		case "yaml":
+			out, err := yaml.Marshal(eippoolList)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(string(out))
+		default:
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetHeader([]string{
+				"Name",
+				"Bridge",
+				"IPv4 CIDR",
+				"IPv6 CIDR",
 			})
-		}
+			for _, eippool := range eippoolList {
+				table.Append([]string{
+					eippool.Name,
+					eippool.Spec.BridgeName,
+					eippool.Spec.IPv4CIDR,
+					eippool.Spec.IPv6CIDR,
+				})
+			}
 
-		table.Render()
+			table.Render()
+		}
 	},
 }

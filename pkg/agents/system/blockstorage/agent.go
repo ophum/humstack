@@ -108,17 +108,17 @@ func (a *BlockStorageAgent) Run() {
 						if bs.Status.State != system.BlockStorageStateDeleting &&
 							bs.Status.State != system.BlockStorageStatePending {
 
-							oldState := bs.Status.State
-							bs.Status.State = system.BlockStorageStateActive
+							isUsed := false
 							for i, usedID := range usedBSIDs {
 								if bs.ID == usedID {
-									bs.Status.State = system.BlockStorageStateUsed
+									isUsed = true
 									usedBSIDs = append(usedBSIDs[:i], usedBSIDs[i+1:]...)
 									break
 								}
 							}
 
-							if bs.Status.State != oldState {
+							if bs.Status.State != system.BlockStorageStateUsed && isUsed {
+								bs.Status.State = system.BlockStorageStateUsed
 								bs, err = a.client.SystemV0().BlockStorage().Update(bs)
 								if err != nil {
 									a.logger.Error(

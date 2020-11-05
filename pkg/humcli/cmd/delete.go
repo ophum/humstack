@@ -35,12 +35,12 @@ var deleteCmd = &cobra.Command{
 
 				switch item.Meta.APIType {
 				case meta.APITypeGroupV0:
-					err = clients.CoreV0().Group().Delete(item.Meta.ID)
+					err = clients.CoreV0().Group().DeleteState(item.Meta.ID)
 					if err != nil {
 						log.Fatal(errors.Wrap(err, "delete").Error())
 					}
 				case meta.APITypeNamespaceV0:
-					err = clients.CoreV0().Namespace().Delete(item.Meta.Group, item.Meta.ID)
+					err = clients.CoreV0().Namespace().DeleteState(item.Meta.Group, item.Meta.ID)
 					if err != nil {
 						log.Fatal(errors.Wrap(err, "create").Error())
 					}

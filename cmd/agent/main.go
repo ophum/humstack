@@ -4,7 +4,10 @@ import (
 	"flag"
 	"log"
 	"os"
+	"os/signal"
 
+	"github.com/ophum/humstack/pkg/agents/core/group"
+	"github.com/ophum/humstack/pkg/agents/core/namespace"
 	"github.com/ophum/humstack/pkg/agents/system/blockstorage"
 	"github.com/ophum/humstack/pkg/agents/system/image"
 	"github.com/ophum/humstack/pkg/agents/system/network"
@@ -18,11 +21,20 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type AgentMode string
+
+const (
+	AgentModeCore   AgentMode = "Core"
+	AgentModeSystem AgentMode = "System"
+	AgentModeAll    AgentMode = "All"
+)
+
 type Config struct {
-	ApiServerAddress string `yaml:"apiServerAddress"`
-	ApiServerPort    int32  `yaml:"apiServerPort"`
-	LimitMemory      string `yaml:"limitMemory"`
-	LimitVcpus       string `yaml:"limitVcpus"`
+	AgentMode        AgentMode `yaml:"agentMode"`
+	ApiServerAddress string    `yaml:"apiServerAddress"`
+	ApiServerPort    int32     `yaml:"apiServerPort"`
+	LimitMemory      string    `yaml:"limitMemory"`
+	LimitVcpus       string    `yaml:"limitVcpus"`
 
 	BlockStorageAgentConfig blockstorage.BlockStorageAgentConfig `yaml:"blockStorageAgentConfig"`
 
@@ -73,6 +85,9 @@ func main() {
 		Meta: meta.Meta{
 			ID:   hostname,
 			Name: hostname,
+			Annotations: map[string]string{
+				"agentMode": string(config.AgentMode),
+			},
 		},
 		Spec: system.NodeSpec{
 			LimitMemory: config.LimitMemory,
@@ -81,46 +96,69 @@ func main() {
 	}, client,
 		logger.With(zap.Namespace("NodeAgent")),
 	)
-
-	netAgent := network.NewNetworkAgent(
-		client,
-		&config.NetworkAgentConfig,
-		logger.With(zap.Namespace("NetworkAgent")),
-	)
-
-	bsAgent := blockstorage.NewBlockStorageAgent(
-		client,
-		&config.BlockStorageAgentConfig,
-		logger.With(zap.Namespace("BlockStorageAgent")),
-	)
-
-	imAgent := image.NewImageAgent(
-		client,
-		&config.ImageAgentConfig,
-		logger.With(zap.Namespace("ImageAgent")),
-	)
-
-	vmAgent := virtualmachine.NewVirtualMachineAgent(
-		client,
-		logger.With(zap.Namespace("VirtualMachineAgent")),
-	)
-
-	vrAgent := virtualrouter.NewVirtualRouterAgent(
-		client,
-		"exBr",
-		"10.0.0.0/24",
-		[]string{"10.0.0.1", "10.0.0.2"},
-		logger.With(zap.Namespace("VirtualRouterAgent")),
-	)
-
-	log.Println(config.ImageAgentConfig.DownloadAPI)
 	go nodeAgent.Run()
-	go bsAgent.Run()
-	go bsAgent.DownloadAPI(&config.BlockStorageAgentConfig.DownloadAPI)
-	go imAgent.Run()
-	go imAgent.DownloadAPI(&config.ImageAgentConfig.DownloadAPI)
-	go vmAgent.Run()
-	go vrAgent.Run()
-	netAgent.Run()
 
+	if config.AgentMode == AgentModeAll || config.AgentMode == AgentModeCore {
+		grAgent := group.NewGroupAgent(
+			client,
+			logger.With(zap.Namespace("GroupAgent")),
+		)
+
+		nsAgent := namespace.NewNamespaceAgent(
+			client,
+			logger.With(zap.Namespace("NamespaceAgent")),
+		)
+
+		go grAgent.Run()
+		go nsAgent.Run()
+	}
+
+	if config.AgentMode == AgentModeAll || config.AgentMode == AgentModeSystem {
+		netAgent := network.NewNetworkAgent(
+			client,
+			&config.NetworkAgentConfig,
+			logger.With(zap.Namespace("NetworkAgent")),
+		)
+
+		bsAgent := blockstorage.NewBlockStorageAgent(
+			client,
+			&config.BlockStorageAgentConfig,
+			logger.With(zap.Namespace("BlockStorageAgent")),
+		)
+
+		imAgent := image.NewImageAgent(
+			client,
+			&config.ImageAgentConfig,
+			logger.With(zap.Namespace("ImageAgent")),
+		)
+
+		vmAgent := virtualmachine.NewVirtualMachineAgent(
+			client,
+			logger.With(zap.Namespace("VirtualMachineAgent")),
+		)
+
+		vrAgent := virtualrouter.NewVirtualRouterAgent(
+			client,
+			"exBr",
+			"10.0.0.0/24",
+			[]string{"10.0.0.1", "10.0.0.2"},
+			logger.With(zap.Namespace("VirtualRouterAgent")),
+		)
+
+		log.Println(config.ImageAgentConfig.DownloadAPI)
+		go bsAgent.Run()
+		go bsAgent.DownloadAPI(&config.BlockStorageAgentConfig.DownloadAPI)
+		go imAgent.Run()
+		go imAgent.DownloadAPI(&config.ImageAgentConfig.DownloadAPI)
+		go vmAgent.Run()
+		go vrAgent.Run()
+		go netAgent.Run()
+
+	}
+
+	done := make(chan os.Signal, 1)
+
+	signal.Notify(done, os.Interrupt)
+
+	<-done
 }
