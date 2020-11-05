@@ -115,12 +115,13 @@ type BlockStorageSpec struct {
 type BlockStorageState string
 
 const (
-	BlockStorageStateActive   BlockStorageState = "Active"
-	BlockStorageStateUsed     BlockStorageState = "Used"
-	BlockStorageStatePending  BlockStorageState = "Pending"
-	BlockStorageStateDeleting BlockStorageState = "Deleting"
-	BlockStorageStateCopying  BlockStorageState = "Copying"
-	BlockStorageStateReserved BlockStorageState = "Reserved"
+	BlockStorageStateActive      BlockStorageState = "Active"
+	BlockStorageStateUsed        BlockStorageState = "Used"
+	BlockStorageStatePending     BlockStorageState = "Pending"
+	BlockStorageStateDeleting    BlockStorageState = "Deleting"
+	BlockStorageStateCopying     BlockStorageState = "Copying"
+	BlockStorageStateDownloading BlockStorageState = "Downloading"
+	BlockStorageStateReserved    BlockStorageState = "Reserved"
 )
 
 type BlockStorageStatus struct {
