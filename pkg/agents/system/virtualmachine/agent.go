@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -152,7 +153,7 @@ func (a *VirtualMachineAgent) powerOffVirtualMachine(vm *system.VirtualMachine) 
 		return err
 	}
 
-	err = p.Kill()
+	err = p.Signal(syscall.SIGTERM)
 	if err != nil {
 		return err
 	}
