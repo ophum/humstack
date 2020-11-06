@@ -4,13 +4,13 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,9 +25,9 @@ import (
 )
 
 type VirtualMachineAgent struct {
-	client *client.Clients
-	logger *zap.Logger
-
+	client        *client.Clients
+	logger        *zap.Logger
+	nodeName      string
 	vncDisplayMap map[int32]bool
 }
 
@@ -36,9 +36,15 @@ const (
 )
 
 func NewVirtualMachineAgent(client *client.Clients, logger *zap.Logger) *VirtualMachineAgent {
+
+	nodeName, err := os.Hostname()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 	return &VirtualMachineAgent{
 		client:        client,
 		logger:        logger,
+		nodeName:      nodeName,
 		vncDisplayMap: map[int32]bool{},
 	}
 }
@@ -46,15 +52,6 @@ func NewVirtualMachineAgent(client *client.Clients, logger *zap.Logger) *Virtual
 func (a *VirtualMachineAgent) Run() {
 	ticker := time.NewTicker(time.Second * 5)
 	defer ticker.Stop()
-
-	nodeName, err := os.Hostname()
-	if err != nil {
-		a.logger.Panic(
-			"get hostname",
-			zap.String("msg", err.Error()),
-			zap.Time("time", time.Now()),
-		)
-	}
 
 	for {
 		select {
@@ -93,7 +90,7 @@ func (a *VirtualMachineAgent) Run() {
 
 					for _, vm := range vmList {
 						oldHash := vm.ResourceHash
-						if vm.Annotations[VirtualMachineV0AnnotationNodeName] != nodeName {
+						if vm.Annotations[VirtualMachineV0AnnotationNodeName] != a.nodeName {
 							continue
 						}
 						err = a.syncVirtualMachine(vm)
@@ -153,7 +150,7 @@ func (a *VirtualMachineAgent) powerOffVirtualMachine(vm *system.VirtualMachine) 
 		return err
 	}
 
-	err = p.Signal(syscall.SIGTERM)
+	err = p.Kill()
 	if err != nil {
 		return err
 	}
@@ -334,7 +331,8 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		"-daemonize",
 		"-nodefaults",
 		"-vnc",
-		fmt.Sprintf("0.0.0.0:%d", displayNumber),
+		// とりあえず6900以降をWebSocketに使う
+		fmt.Sprintf("0.0.0.0:%d,websocket=%d", displayNumber, 6900+displayNumber),
 		"-smp",
 		fmt.Sprintf("%s,sockets=1,cores=%s,threads=1", vcpus, vcpus),
 		"-cpu",
@@ -379,8 +377,14 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		return errors.Wrap(err, "get pid")
 	}
 
+	node, err := a.client.SystemV0().Node().Get(a.nodeName)
+	if err != nil {
+		return errors.Wrap(err, "get node")
+	}
+
 	vm.Annotations["virtualmachinev0/pid"] = fmt.Sprint(pid)
 	vm.Annotations["virtualmachinev0/vnc_display_number"] = fmt.Sprint(displayNumber)
+	vm.Annotations["virtualmachinev0/vnc_websocket_host"] = fmt.Sprintf("%s:%d", node.Spec.Address, displayNumber+6900)
 	vm.Status.State = system.VirtualMachineStateRunning
 	return nil
 }

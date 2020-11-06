@@ -2,10 +2,13 @@ package v0
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/koding/websocketproxy"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/api/system/virtualmachine"
@@ -139,6 +142,51 @@ func (h *VirtualMachineHandler) Delete(ctx *gin.Context) {
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"virtualmachine": nil,
 	})
+}
+
+func (h *VirtualMachineHandler) OpenConsole(ctx *gin.Context) {
+	groupID, nsID, vmID := getIDs(ctx)
+	ctx.Redirect(307, fmt.Sprintf("/static/vnc.html?path=api/v0/groups/%s/namespaces/%s/virtualmachines/%s/ws", groupID, nsID, vmID))
+}
+
+func (h *VirtualMachineHandler) ConsoleWebSocketProxy(ctx *gin.Context) {
+	groupID, nsID, vmID := getIDs(ctx)
+
+	key := getKey(groupID, nsID, vmID)
+	h.store.Lock(key)
+	defer h.store.Unlock(key)
+
+	vm := system.VirtualMachine{}
+	if err := h.store.Get(key, &vm); err != nil {
+		if err.Error() == "Not Found" {
+			meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("VirtualMachine `%s` is not found.", vmID), nil)
+			return
+		} else {
+			meta.ResponseJSON(ctx, http.StatusInternalServerError, err, gin.H{})
+			log.Println(err.Error())
+			return
+		}
+	}
+
+	backendHost, ok := vm.Annotations["virtualmachinev0/vnc_websocket_host"]
+	if !ok {
+		meta.ResponseJSON(ctx, http.StatusInternalServerError, fmt.Errorf("vnc setting not found"), gin.H{})
+		return
+	}
+
+	backendURL := &url.URL{
+		Scheme: "ws",
+		Host:   backendHost,
+		Path:   "/",
+	}
+
+	ws := &websocketproxy.WebsocketProxy{
+		Backend: func(*http.Request) *url.URL {
+			return backendURL
+		},
+	}
+	delete(ctx.Request.Header, "Origin")
+	ws.ServeHTTP(ctx.Writer, ctx.Request)
 }
 
 func getIDs(ctx *gin.Context) (groupID, nsID, vmID string) {

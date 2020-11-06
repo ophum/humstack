@@ -35,6 +35,7 @@ type Config struct {
 	ApiServerPort    int32     `yaml:"apiServerPort"`
 	LimitMemory      string    `yaml:"limitMemory"`
 	LimitVcpus       string    `yaml:"limitVcpus"`
+	NodeAddress      string    `yaml:"nodeAddress"`
 
 	BlockStorageAgentConfig blockstorage.BlockStorageAgentConfig `yaml:"blockStorageAgentConfig"`
 
@@ -90,6 +91,7 @@ func main() {
 			},
 		},
 		Spec: system.NodeSpec{
+			Address:     config.NodeAddress,
 			LimitMemory: config.LimitMemory,
 			LimitVcpus:  config.LimitVcpus,
 		},

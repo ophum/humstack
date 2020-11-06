@@ -193,6 +193,7 @@ type VirtualMachine struct {
 }
 
 type NodeSpec struct {
+	Address     string `json:"address" yaml:"address"`
 	LimitVcpus  string `json:"limitVcpus" yaml:"limitVcpus"`
 	LimitMemory string `json:"limitMemory" yaml:"limitMemory"`
 }

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 
+	_ "github.com/ophum/humstack/cmd/apiserver/statik"
+
 	"github.com/gin-gonic/gin"
 	"github.com/ophum/humstack/pkg/api/core/externalip"
 	eipv0 "github.com/ophum/humstack/pkg/api/core/externalip/v0"
@@ -30,6 +32,7 @@ import (
 	vrv0 "github.com/ophum/humstack/pkg/api/system/virtualrouter/v0"
 	"github.com/ophum/humstack/pkg/api/watch"
 	watchv0 "github.com/ophum/humstack/pkg/api/watch/v0"
+	"github.com/rakyll/statik/fs"
 
 	//store "github.com/ophum/humstack/pkg/store/memory"
 	store "github.com/ophum/humstack/pkg/store/leveldb"
@@ -71,6 +74,13 @@ func main() {
 			}
 		}
 	}()
+
+	statikFS, err := fs.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r.StaticFS("/static", statikFS)
 
 	grh := grv0.NewGroupHandler(s)
 	nsh := nsv0.NewNamespaceHandler(s)

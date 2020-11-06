@@ -10,6 +10,8 @@ type VirtualMachineHandlerInterface interface {
 	Create(ctx *gin.Context)
 	Update(ctx *gin.Context)
 	Delete(ctx *gin.Context)
+	OpenConsole(ctx *gin.Context)
+	ConsoleWebSocketProxy(ctx *gin.Context)
 }
 
 const (
@@ -32,6 +34,8 @@ func (h *VirtualMachineHandler) RegisterHandlers() {
 	vm := h.router.Group(basePath)
 	{
 		vm.GET("", h.vmhi.FindAll)
+		vm.GET("/:virtual_machine_id/ws", h.vmhi.ConsoleWebSocketProxy)
+		vm.GET("/:virtual_machine_id/console", h.vmhi.OpenConsole)
 		vm.GET("/:virtual_machine_id", h.vmhi.Find)
 		vm.POST("", h.vmhi.Create)
 		vm.PUT("/:virtual_machine_id", h.vmhi.Update)
