@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/meta"
-	"github.com/ophum/humstack/pkg/api/system"
 )
 
 type NetworkClient struct {
@@ -22,7 +22,7 @@ type NetworkResponse struct {
 	Code  int32       `json:"code"`
 	Error interface{} `json:"error"`
 	Data  struct {
-		Network system.Network `json:"network"`
+		Network core.Network `json:"network"`
 	} `json:"data"`
 }
 
@@ -30,7 +30,7 @@ type NetworkListResponse struct {
 	Code  int32       `json:"code"`
 	Error interface{} `json:"error"`
 	Data  struct {
-		NetworkList []*system.Network `json:"networks"`
+		NetworkList []*core.Network `json:"networks"`
 	} `json:"data"`
 }
 
@@ -51,7 +51,7 @@ func NewNetworkClient(scheme, apiServerAddress string, apiServerPort int32) *Net
 	}
 }
 
-func (c *NetworkClient) Get(groupID, namespaceID, networkID string) (*system.Network, error) {
+func (c *NetworkClient) Get(groupID, namespaceID, networkID string) (*core.Network, error) {
 	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(groupID, namespaceID, networkID))
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (c *NetworkClient) Get(groupID, namespaceID, networkID string) (*system.Net
 	return &nodeResp.Data.Network, nil
 }
 
-func (c *NetworkClient) List(groupID, namespaceID string) ([]*system.Network, error) {
+func (c *NetworkClient) List(groupID, namespaceID string) ([]*core.Network, error) {
 	resp, err := c.client.R().SetHeaders(c.headers).Get(c.getPath(groupID, namespaceID, ""))
 	if err != nil {
 		return nil, err
@@ -82,7 +82,7 @@ func (c *NetworkClient) List(groupID, namespaceID string) ([]*system.Network, er
 	return nodeResp.Data.NetworkList, nil
 }
 
-func (c *NetworkClient) Create(network *system.Network) (*system.Network, error) {
+func (c *NetworkClient) Create(network *core.Network) (*core.Network, error) {
 	body, err := json.Marshal(network)
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func (c *NetworkClient) Create(network *system.Network) (*system.Network, error)
 	return &nodeResp.Data.Network, nil
 }
 
-func (c *NetworkClient) Update(network *system.Network) (*system.Network, error) {
+func (c *NetworkClient) Update(network *core.Network) (*core.Network, error) {
 	body, err := json.Marshal(network)
 	if err != nil {
 		return nil, err

@@ -8,36 +8,36 @@ const (
 	ResourceTypeNetwork meta.ResourceType = "Network"
 )
 
-type NetworkSpec struct {
+type NodeNetworkSpec struct {
 	ID       string `json:"id" yaml:"id"`
 	IPv4CIDR string `json:"ipv4CIDR" yaml:"ipv4CIDR"`
 	IPv6CIDR string `json:"ipv6CIDR" yaml:"ipv6CIDR"`
 }
 
-type NetworkState string
+type NodeNetworkState string
 
 const (
-	NetworkStatePending   NetworkState = "Pending"
-	NetworkStateAvailable NetworkState = "Available"
-	NetworkStateDeleting  NetworkState = "Deleting"
+	NetworkStatePending   NodeNetworkState = "Pending"
+	NetworkStateAvailable NodeNetworkState = "Available"
+	NetworkStateDeleting  NodeNetworkState = "Deleting"
 )
 
-type NetworkStatusLog struct {
+type NodeNetworkStatusLog struct {
 	NodeID   string `json:"nodeID" yaml:"nodeID"`
 	Datetime string `json:"datetime" yaml:"datetime"`
 	Log      string `json:"log" yaml:"log"`
 }
-type NetworkStatus struct {
-	State              NetworkState                 `json:"state" yaml:"state"`
+type NodeNetworkStatus struct {
+	State              NodeNetworkState             `json:"state" yaml:"state"`
 	AttachedInterfaces map[string]VirtualMachineNIC `json:"attachedInterfaces" yaml:"attachedInterfaces"`
-	Logs               []NetworkStatusLog           `json:"logs" yaml:"logs"`
+	Logs               []NodeNetworkStatusLog       `json:"logs" yaml:"logs"`
 }
 
-type Network struct {
+type NodeNetwork struct {
 	meta.Meta `json:"meta" yaml:"meta"`
 
-	Spec   NetworkSpec   `json:"spec" yaml:"spec"`
-	Status NetworkStatus `json:"status" yaml:"status"`
+	Spec   NodeNetworkSpec   `json:"spec" yaml:"spec"`
+	Status NodeNetworkStatus `json:"status" yaml:"status"`
 }
 
 type ImageEntitySource struct {

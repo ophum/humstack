@@ -4,7 +4,7 @@ type APIType string
 
 const (
 	APITypeNodeV0           APIType = "systemv0/node"
-	APITypeNetworkV0        APIType = "systemv0/network"
+	APITypeNodeNetworkV0    APIType = "systemv0/nodenetwork"
 	APITypeBlockStorageV0   APIType = "systemv0/blockstorage"
 	APITypeVirtualMachineV0 APIType = "systemv0/virtualmachine"
 	APITypeVirtualRouterV0  APIType = "systemv0/virtualrouter"
@@ -15,6 +15,7 @@ const (
 	APITypeGroupV0          APIType = "corev0/group"
 	APITypeExternalIPPoolV0 APIType = "corev0/externalippool"
 	APITypeExternalIPV0     APIType = "corev0/externalip"
+	APITypeNetworkV0        APIType = "corev0/network"
 )
 
 type ResourceType string
@@ -27,16 +28,21 @@ const (
 	DeleteStateDone   DeleteState = "Done"
 )
 
+type OwnerReference struct {
+	Meta Meta `json:"meta" yaml:"meta"`
+}
+
 type Meta struct {
-	ID           string            `json:"id" yaml:"id"`
-	Name         string            `json:"name" yaml:"name"`
-	Namespace    string            `json:"namespace" yaml:"namespace"`
-	Group        string            `json:"group" yaml:"group"`
-	Annotations  map[string]string `json:"annotations" yaml:"annotations"`
-	Labels       map[string]string `json:"labels" yaml:"labels"`
-	ResourceHash string            `json:"resourceHash" yaml:"resourceHash"`
-	DeleteState  DeleteState       `json:"deleteState" yaml:"deleteState"`
-	APIType      APIType           `json:"apiType" yaml:"apiType"`
+	ID              string            `json:"id" yaml:"id"`
+	Name            string            `json:"name" yaml:"name"`
+	Namespace       string            `json:"namespace" yaml:"namespace"`
+	Group           string            `json:"group" yaml:"group"`
+	Annotations     map[string]string `json:"annotations" yaml:"annotations"`
+	Labels          map[string]string `json:"labels" yaml:"labels"`
+	ResourceHash    string            `json:"resourceHash" yaml:"resourceHash"`
+	DeleteState     DeleteState       `json:"deleteState" yaml:"deleteState"`
+	APIType         APIType           `json:"apiType" yaml:"apiType"`
+	OwnerReferences []OwnerReference  `json:"ownerReferences" yaml:"ownerReferences"`
 }
 
 type Object struct {

@@ -8,10 +8,11 @@ import (
 
 	"github.com/ophum/humstack/pkg/agents/core/group"
 	"github.com/ophum/humstack/pkg/agents/core/namespace"
+	"github.com/ophum/humstack/pkg/agents/core/network"
 	"github.com/ophum/humstack/pkg/agents/system/blockstorage"
 	"github.com/ophum/humstack/pkg/agents/system/image"
-	"github.com/ophum/humstack/pkg/agents/system/network"
 	"github.com/ophum/humstack/pkg/agents/system/node"
+	"github.com/ophum/humstack/pkg/agents/system/nodenetwork"
 	"github.com/ophum/humstack/pkg/agents/system/virtualmachine"
 	"github.com/ophum/humstack/pkg/agents/system/virtualrouter"
 	"github.com/ophum/humstack/pkg/api/meta"
@@ -39,7 +40,7 @@ type Config struct {
 
 	BlockStorageAgentConfig blockstorage.BlockStorageAgentConfig `yaml:"blockStorageAgentConfig"`
 
-	NetworkAgentConfig network.NetworkAgentConfig `yaml:"networkAgentConfig"`
+	NetworkAgentConfig nodenetwork.NetworkAgentConfig `yaml:"networkAgentConfig"`
 
 	ImageAgentConfig image.ImageAgentConfig `yaml:"imageAgentConfig"`
 }
@@ -111,15 +112,21 @@ func main() {
 			logger.With(zap.Namespace("NamespaceAgent")),
 		)
 
+		netAgent := network.NewNetworkAgent(
+			client,
+			logger.With(zap.Namespace("NetworkAgent")),
+		)
+
 		go grAgent.Run()
 		go nsAgent.Run()
+		go netAgent.Run()
 	}
 
 	if config.AgentMode == AgentModeAll || config.AgentMode == AgentModeSystem {
-		netAgent := network.NewNetworkAgent(
+		nodeNetAgent := nodenetwork.NewNodeNetworkAgent(
 			client,
 			&config.NetworkAgentConfig,
-			logger.With(zap.Namespace("NetworkAgent")),
+			logger.With(zap.Namespace("NodeNetworkAgent")),
 		)
 
 		bsAgent := blockstorage.NewBlockStorageAgent(
@@ -154,7 +161,7 @@ func main() {
 		go imAgent.DownloadAPI(&config.ImageAgentConfig.DownloadAPI)
 		go vmAgent.Run()
 		go vrAgent.Run()
-		go netAgent.Run()
+		go nodeNetAgent.Run()
 
 	}
 

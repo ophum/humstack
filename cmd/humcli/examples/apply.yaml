@@ -36,11 +36,14 @@ meta:
   name: network1
   group: group2
   namespace: ns10
-  annotations:
-    networkv0/network_type: VXLAN
 spec:
-  id: "100"
-  ipv4CIDR: 10.0.0.0/24
+  template:
+    meta:
+      annotations:
+        networkv0/network_type: VXLAN
+    spec:
+      id: "100"
+      ipv4CIDR: 10.0.0.0/24
 ---
 meta:
   apiType: systemv0/virtualrouter

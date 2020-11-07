@@ -38,7 +38,7 @@ func (h *NodeHandler) FindAll(ctx *gin.Context) {
 		return m
 	}
 
-	h.store.List(getKey(""), f)
+	h.store.List(getKey("")+"/", f)
 
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"nodes": nodeList,

@@ -15,7 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/n0stack/n0stack/n0core/pkg/driver/iproute2"
-	"github.com/ophum/humstack/pkg/agents/system/network/utils"
+	"github.com/ophum/humstack/pkg/agents/system/nodenetwork/utils"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
@@ -209,30 +209,34 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 			nic.MacAddress = generateMacAddress(vm.ID + nic.NetworkID)
 		}
 
-		net, err := a.client.SystemV0().Network().Get(vm.Group, vm.Namespace, nic.NetworkID)
+		n, err := a.client.CoreV0().Network().Get(vm.Group, vm.Namespace, nic.NetworkID)
+		if err != nil {
+			return err
+		}
+		net, err := a.getNodeNetwork(vm.Group, vm.Namespace, n.ID, a.nodeName)
 		if err != nil {
 			return err
 		}
 
-		if _, ok := net.Annotations["networkv0/bridge_name"]; !ok {
+		if _, ok := net.Annotations["nodenetworkv0/bridge_name"]; !ok {
 			return fmt.Errorf("network is not active")
 		}
-		tapName := utils.GenerateName("hum-vm-", net.Annotations["networkv0/bridge_name"]+vm.ID)
+		tapName := utils.GenerateName("hum-vm-", net.Annotations["nodenetworkv0/bridge_name"]+vm.ID)
 		tapName = fmt.Sprintf("%s-%02d", tapName[:len(tapName)-3], i)
 
 		tapNames = append(tapNames, tapName)
-		brNames = append(brNames, net.Annotations["networkv0/bridge_name"])
+		brNames = append(brNames, net.Annotations["nodenetworkv0/bridge_name"])
 
 		nics = append(nics,
 			"-device",
 			fmt.Sprintf("virtio-net,netdev=netdev-%s,driver=virtio-net-pci,mac=%s,mq=on,rx_queue_size=1024,tx_queue_size=1024,vectors=%d",
-				net.Annotations["networkv0/bridge_name"],
+				net.Annotations["nodenetworkv0/bridge_name"],
 				nic.MacAddress,
 				vcpusInt*2+2,
 			),
 			"-netdev",
 			fmt.Sprintf("tap,script=no,downscript=no,id=netdev-%s,vhost=on,ifname=%s,queues=%d",
-				net.Annotations["networkv0/bridge_name"],
+				net.Annotations["nodenetworkv0/bridge_name"],
 				tapName,
 				vcpusInt,
 			),
@@ -273,11 +277,11 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 	networkConfigConfigs := []cloudinit.NetworkConfigConfig{}
 	for i, nic := range vm.Spec.NICs {
 		// 上のやつと統合するべき
-		n, err := a.client.SystemV0().Network().Get(vm.Group, vm.Namespace, nic.NetworkID)
+		n, err := a.client.CoreV0().Network().Get(vm.Group, vm.Namespace, nic.NetworkID)
 		if err != nil {
 			return err
 		}
-		_, ipnet, err := net.ParseCIDR(n.Spec.IPv4CIDR)
+		_, ipnet, err := net.ParseCIDR(n.Spec.Template.Spec.IPv4CIDR)
 
 		networkConfigConfigs = append(networkConfigConfigs, cloudinit.NetworkConfigConfig{
 			Type:       cloudinit.NetworkConfigConfigTypePhysical,
@@ -440,6 +444,30 @@ func getPID(uuid string) (int64, error) {
 	}
 
 	return strconv.ParseInt(string(out), 10, 64)
+}
+
+func (a *VirtualMachineAgent) getNodeNetwork(groupID, namespaceID, networkID, nodeID string) (*system.NodeNetwork, error) {
+	nodeNetList, err := a.client.SystemV0().NodeNetwork().List(groupID, namespaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, nodeNet := range nodeNetList {
+		isOwned := false
+		for _, owner := range nodeNet.OwnerReferences {
+			if owner.Meta.ID == networkID {
+				isOwned = true
+				break
+			}
+		}
+		if isOwned {
+			if node, ok := nodeNet.Annotations["nodenetworkv0/node_name"]; ok && node == nodeID {
+				return nodeNet, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("NodeNetwork not found")
 }
 
 func setHash(vm *system.VirtualMachine) error {

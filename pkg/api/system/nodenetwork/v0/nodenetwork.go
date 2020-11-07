@@ -10,30 +10,30 @@ import (
 	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
-	"github.com/ophum/humstack/pkg/api/system/network"
+	"github.com/ophum/humstack/pkg/api/system/nodenetwork"
 	"github.com/ophum/humstack/pkg/store"
 )
 
-type NetworkHandler struct {
-	network.NetworkHandlerInterface
+type NodeNetworkHandler struct {
+	nodenetwork.NodeNetworkHandlerInterface
 
 	store store.Store
 }
 
-func NewNetworkHandler(store store.Store) *NetworkHandler {
-	return &NetworkHandler{
+func NewNodeNetworkHandler(store store.Store) *NodeNetworkHandler {
+	return &NodeNetworkHandler{
 		store: store,
 	}
 }
 
-func (h *NetworkHandler) FindAll(ctx *gin.Context) {
+func (h *NodeNetworkHandler) FindAll(ctx *gin.Context) {
 	groupID, nsID, _ := getIDs(ctx)
 
-	netList := []*system.Network{}
+	netList := []*system.NodeNetwork{}
 	f := func(n int) []interface{} {
 		m := []interface{}{}
 		for i := 0; i < n; i++ {
-			net := &system.Network{}
+			net := &system.NodeNetwork{}
 			netList = append(netList, net)
 			m = append(m, net)
 		}
@@ -43,29 +43,29 @@ func (h *NetworkHandler) FindAll(ctx *gin.Context) {
 	h.store.List(getKey(groupID, nsID, ""), f)
 
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
-		"networks": netList,
+		"nodenetworks": netList,
 	})
 }
 
-func (h *NetworkHandler) Find(ctx *gin.Context) {
+func (h *NodeNetworkHandler) Find(ctx *gin.Context) {
 	groupID, nsID, netID := getIDs(ctx)
 
-	var net system.Network
+	var net system.NodeNetwork
 	err := h.store.Get(getKey(groupID, nsID, netID), &net)
 	if err != nil && err.Error() == "Not Found" {
-		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Network `%s` is not found.", nsID), nil)
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("NodeNetwork `%s` is not found.", nsID), nil)
 		return
 	}
 
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
-		"network": net,
+		"nodenetwork": net,
 	})
 }
 
-func (h *NetworkHandler) Create(ctx *gin.Context) {
+func (h *NodeNetworkHandler) Create(ctx *gin.Context) {
 	groupID, nsID, _ := getIDs(ctx)
 
-	var request system.Network
+	var request system.NodeNetwork
 
 	err := ctx.Bind(&request)
 	if err != nil {
@@ -87,28 +87,28 @@ func (h *NetworkHandler) Create(ctx *gin.Context) {
 	}
 
 	key := getKey(groupID, nsID, request.ID)
-	var net system.Network
+	var net system.NodeNetwork
 	err = h.store.Get(key, &net)
 	if err == nil {
-		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: Network `%s` is already exists.", request.Name), nil)
+		meta.ResponseJSON(ctx, http.StatusConflict, fmt.Errorf("Error: NodeNetwork `%s` is already exists.", request.Name), nil)
 		return
 	}
 
 	h.store.Lock(key)
 	defer h.store.Unlock(key)
 
-	request.APIType = meta.APITypeNetworkV0
+	request.APIType = meta.APITypeNodeNetworkV0
 	h.store.Put(key, request)
 
 	meta.ResponseJSON(ctx, http.StatusCreated, nil, gin.H{
-		"network": request,
+		"nodenetwork": request,
 	})
 }
 
-func (h *NetworkHandler) Update(ctx *gin.Context) {
+func (h *NodeNetworkHandler) Update(ctx *gin.Context) {
 	groupID, nsID, netID := getIDs(ctx)
 
-	var request system.Network
+	var request system.NodeNetwork
 	err := ctx.Bind(&request)
 	if err != nil {
 		meta.ResponseJSON(ctx, http.StatusBadRequest, err, nil)
@@ -116,15 +116,15 @@ func (h *NetworkHandler) Update(ctx *gin.Context) {
 	}
 
 	if netID != request.ID {
-		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: Can't change Network Name."), nil)
+		meta.ResponseJSON(ctx, http.StatusBadRequest, fmt.Errorf("Error: Can't change NodeNetwork Name."), nil)
 		return
 	}
 
 	key := getKey(groupID, nsID, netID)
-	var net system.Network
+	var net system.NodeNetwork
 	err = h.store.Get(key, &net)
 	if err != nil && err.Error() == "Not Found" {
-		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: Network `%s` is not found in Namespace `%s`.", netID, nsID), nil)
+		meta.ResponseJSON(ctx, http.StatusNotFound, fmt.Errorf("Error: NodeNetwork `%s` is not found in Namespace `%s`.", netID, nsID), nil)
 		return
 	}
 
@@ -134,11 +134,11 @@ func (h *NetworkHandler) Update(ctx *gin.Context) {
 	h.store.Put(key, request)
 
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
-		"network": request,
+		"nodenetwork": request,
 	})
 }
 
-func (h *NetworkHandler) Delete(ctx *gin.Context) {
+func (h *NodeNetworkHandler) Delete(ctx *gin.Context) {
 	groupID, nsID, netID := getIDs(ctx)
 
 	key := getKey(groupID, nsID, netID)
@@ -147,17 +147,17 @@ func (h *NetworkHandler) Delete(ctx *gin.Context) {
 
 	h.store.Delete(key)
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
-		"network": nil,
+		"nodenetwork": nil,
 	})
 }
 
 func getIDs(ctx *gin.Context) (groupID, nsID, netID string) {
 	groupID = ctx.Param("group_id")
 	nsID = ctx.Param("namespace_id")
-	netID = ctx.Param("network_id")
+	netID = ctx.Param("node_network_id")
 	return groupID, nsID, netID
 }
 
 func getKey(groupID, nsID, id string) string {
-	return filepath.Join("network", groupID, nsID, id)
+	return filepath.Join("nodenetwork", groupID, nsID, id)
 }

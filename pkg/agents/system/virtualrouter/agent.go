@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ophum/humstack/pkg/agents/system/network/utils"
+	"github.com/ophum/humstack/pkg/agents/system/nodenetwork/utils"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
 	"github.com/vishvananda/netlink"
@@ -204,12 +204,12 @@ func (a *VirtualRouterAgent) syncVirtualRouter(vr *system.VirtualRouter) error {
 			"ip", "a", "add", nic.IPv4Address, "dev", rtBrVeth,
 		})
 
-		n, err := a.client.SystemV0().Network().Get(vr.Group, vr.Namespace, nic.NetworkID)
+		n, err := a.client.CoreV0().Network().Get(vr.Group, vr.Namespace, nic.NetworkID)
 		if err != nil {
 			return err
 		}
 
-		natRule = append(natRule, fmt.Sprintf("-A POSTROUTING -s %s -j SNAT --to-source %s", n.Spec.IPv4CIDR, natGatewayIP))
+		natRule = append(natRule, fmt.Sprintf("-A POSTROUTING -s %s -j SNAT --to-source %s", n.Spec.Template.Spec.IPv4CIDR, natGatewayIP))
 		netnsExec(netnsName, []string{
 			"sh", "-c", `"echo 1 > /proc/sys/net/ipv4/ip_forward"`,
 		})

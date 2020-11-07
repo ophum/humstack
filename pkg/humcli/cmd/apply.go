@@ -31,6 +31,7 @@ var applyCmd = &cobra.Command{
 			meta.APITypeNetworkV0:        apply.ApplyNetwork,
 			meta.APITypeVirtualMachineV0: apply.ApplyVirtualMachine,
 			meta.APITypeVirtualRouterV0:  apply.ApplyVirtualRouter,
+			meta.APITypeNodeNetworkV0:    apply.ApplyNodeNetwork,
 		}
 
 		for _, file := range args {
