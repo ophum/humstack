@@ -39,7 +39,7 @@ func (h *ImageHandler) FindAll(ctx *gin.Context) {
 		return m
 	}
 
-	h.store.List(getKey(groupID, ""), f)
+	h.store.List(getKey(groupID, "")+"/", f)
 
 	meta.ResponseJSON(ctx, http.StatusOK, nil, gin.H{
 		"images": imList,

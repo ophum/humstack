@@ -55,7 +55,12 @@ var deleteCmd = &cobra.Command{
 						log.Fatal(err)
 					}
 				case meta.APITypeNetworkV0:
-					err = clients.SystemV0().Network().Delete(item.Meta.Group, item.Meta.Namespace, item.Meta.ID)
+					err = clients.CoreV0().Network().DeleteState(item.Meta.Group, item.Meta.Namespace, item.Meta.ID)
+					if err != nil {
+						log.Fatal(err)
+					}
+				case meta.APITypeNodeNetworkV0:
+					err = clients.SystemV0().NodeNetwork().DeleteState(item.Meta.Group, item.Meta.Namespace, item.Meta.ID)
 					if err != nil {
 						log.Fatal(err)
 					}

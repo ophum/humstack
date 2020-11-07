@@ -1,4 +1,4 @@
-package network
+package nodenetwork
 
 import (
 	"crypto/md5"
@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type NetworkAgent struct {
+type NodeNetworkAgent struct {
 	client *client.Clients
 	config *NetworkAgentConfig
 	node   string
@@ -22,21 +22,22 @@ type NetworkAgent struct {
 }
 
 const (
-	NetworkV0AnnotationNetworkType = "networkv0/network_type"
+	NodeNetworkV0AnnotationNetworkType = "nodenetworkv0/network_type"
+	NodeNetworkV0AnnotationNodeName    = "nodenetworkv0/node_name"
 )
 
 const (
-	NetworkV0NetworkTypeVXLAN  = "VXLAN"
-	NetworkV0NetworkTypeVLAN   = "VLAN"
-	NetworkV0NetworkTypeBridge = "Bridge"
+	NodeNetworkV0NetworkTypeVXLAN  = "VXLAN"
+	NodeNetworkV0NetworkTypeVLAN   = "VLAN"
+	NodeNetworkV0NetworkTypeBridge = "Bridge"
 )
 
-func NewNetworkAgent(client *client.Clients, config *NetworkAgentConfig, logger *zap.Logger) *NetworkAgent {
+func NewNodeNetworkAgent(client *client.Clients, config *NetworkAgentConfig, logger *zap.Logger) *NodeNetworkAgent {
 	node, err := os.Hostname()
 	if err != nil {
 		log.Fatal(err)
 	}
-	return &NetworkAgent{
+	return &NodeNetworkAgent{
 		client: client,
 		config: config,
 		node:   node,
@@ -44,7 +45,7 @@ func NewNetworkAgent(client *client.Clients, config *NetworkAgentConfig, logger 
 	}
 }
 
-func (a *NetworkAgent) Run() {
+func (a *NodeNetworkAgent) Run() {
 	ticker := time.NewTicker(time.Second * 5)
 	defer ticker.Stop()
 
@@ -123,7 +124,7 @@ func (a *NetworkAgent) Run() {
 						}
 					}
 
-					netList, err := a.client.SystemV0().Network().List(group.ID, ns.ID)
+					netList, err := a.client.SystemV0().NodeNetwork().List(group.ID, ns.ID)
 					if err != nil {
 						a.logger.Error(
 							"get network list",
@@ -134,11 +135,14 @@ func (a *NetworkAgent) Run() {
 					}
 
 					for _, net := range netList {
+						if nodeName, ok := net.Annotations[NodeNetworkV0AnnotationNodeName]; ok && nodeName != a.node {
+							continue
+						}
 						oldHash := net.ResourceHash
 						net.Status.AttachedInterfaces = attachedInterfacesToNet[net.ID]
-						switch net.Annotations[NetworkV0AnnotationNetworkType] {
-						case NetworkV0NetworkTypeBridge:
-							err = syncBridgeNetwork(net)
+						switch net.Annotations[NodeNetworkV0AnnotationNetworkType] {
+						case NodeNetworkV0NetworkTypeBridge:
+							err = a.syncBridgeNetwork(net)
 							if err != nil {
 								a.logger.Error(
 									"sync bridge network",
@@ -147,7 +151,7 @@ func (a *NetworkAgent) Run() {
 								)
 								continue
 							}
-						case NetworkV0NetworkTypeVXLAN:
+						case NodeNetworkV0NetworkTypeVXLAN:
 							err = a.syncVXLANNetwork(net)
 							if err != nil {
 								a.logger.Error(
@@ -157,7 +161,7 @@ func (a *NetworkAgent) Run() {
 								)
 								continue
 							}
-						case NetworkV0NetworkTypeVLAN:
+						case NodeNetworkV0NetworkTypeVLAN:
 							err = a.syncVLANNetwork(net)
 							if err != nil {
 								a.logger.Error(
@@ -173,7 +177,7 @@ func (a *NetworkAgent) Run() {
 						if net.ResourceHash == oldHash {
 							continue
 						}
-						_, err = a.client.SystemV0().Network().Update(net)
+						_, err = a.client.SystemV0().NodeNetwork().Update(net)
 						if err != nil {
 							a.logger.Error(
 								"update network",
@@ -189,7 +193,7 @@ func (a *NetworkAgent) Run() {
 	}
 }
 
-func setHash(network *system.Network) error {
+func setHash(network *system.NodeNetwork) error {
 	network.ResourceHash = ""
 	resourceJSON, err := json.Marshal(network)
 	if err != nil {

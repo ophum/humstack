@@ -1,4 +1,4 @@
-package network
+package nodenetwork
 
 type NetworkAgentConfigVXLAN struct {
 	DevName string `yaml:"devName"`

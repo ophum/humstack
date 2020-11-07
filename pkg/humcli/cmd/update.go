@@ -98,13 +98,26 @@ var updateCmd = &cobra.Command{
 
 					printYAML(eip)
 				case meta.APITypeNetworkV0:
-					net := &system.Network{}
+					net := &core.Network{}
 					err = d.Decode(net)
 					if err != nil {
 						log.Fatal(err)
 					}
 
-					net, err = clients.SystemV0().Network().Update(net)
+					net, err = clients.CoreV0().Network().Update(net)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					printYAML(net)
+				case meta.APITypeNodeNetworkV0:
+					net := &system.NodeNetwork{}
+					err = d.Decode(net)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					net, err = clients.SystemV0().NodeNetwork().Update(net)
 					if err != nil {
 						log.Fatal(err)
 					}

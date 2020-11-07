@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/ophum/humstack/pkg/api/meta"
+	"github.com/ophum/humstack/pkg/api/system"
 )
 
 const (
@@ -71,4 +72,26 @@ type ExternalIP struct {
 	meta.Meta `json:"meta" yaml:"meta"`
 
 	Spec ExternalIPSpec `json:"spec" yaml:"spec"`
+}
+
+type NetworkSpec struct {
+	Template system.NodeNetwork `json:"template" yaml:"template"`
+}
+
+type NetworkState string
+
+const (
+	NetworkStateActive   NetworkState = "Active"
+	NetworkStateCreating NetworkState = "Creating"
+)
+
+type NetworkStatus struct {
+	State NetworkState `json:"state" yaml:"state"`
+}
+type Network struct {
+	meta.Meta `json:"meta" yaml:"meta"`
+
+	Spec NetworkSpec `json:"spec" yaml:"spec"`
+
+	Status NetworkStatus `json:"status" yaml:"status"`
 }

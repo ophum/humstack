@@ -16,16 +16,18 @@ import (
 	grv0 "github.com/ophum/humstack/pkg/api/core/group/v0"
 	"github.com/ophum/humstack/pkg/api/core/namespace"
 	nsv0 "github.com/ophum/humstack/pkg/api/core/namespace/v0"
+	"github.com/ophum/humstack/pkg/api/core/network"
+	netv0 "github.com/ophum/humstack/pkg/api/core/network/v0"
 	"github.com/ophum/humstack/pkg/api/system/blockstorage"
 	bsv0 "github.com/ophum/humstack/pkg/api/system/blockstorage/v0"
 	"github.com/ophum/humstack/pkg/api/system/image"
 	imv0 "github.com/ophum/humstack/pkg/api/system/image/v0"
 	"github.com/ophum/humstack/pkg/api/system/imageentity"
 	iev0 "github.com/ophum/humstack/pkg/api/system/imageentity/v0"
-	"github.com/ophum/humstack/pkg/api/system/network"
-	netv0 "github.com/ophum/humstack/pkg/api/system/network/v0"
 	"github.com/ophum/humstack/pkg/api/system/node"
 	nodev0 "github.com/ophum/humstack/pkg/api/system/node/v0"
+	"github.com/ophum/humstack/pkg/api/system/nodenetwork"
+	nodenetv0 "github.com/ophum/humstack/pkg/api/system/nodenetwork/v0"
 	"github.com/ophum/humstack/pkg/api/system/virtualmachine"
 	vmv0 "github.com/ophum/humstack/pkg/api/system/virtualmachine/v0"
 	"github.com/ophum/humstack/pkg/api/system/virtualrouter"
@@ -84,6 +86,7 @@ func main() {
 
 	grh := grv0.NewGroupHandler(s)
 	nsh := nsv0.NewNamespaceHandler(s)
+	nnwh := nodenetv0.NewNodeNetworkHandler(s)
 	nwh := netv0.NewNetworkHandler(s)
 	bsh := bsv0.NewBlockStorageHandler(s)
 	vmh := vmv0.NewVirtualMachineHandler(s)
@@ -100,6 +103,7 @@ func main() {
 		gri := group.NewGroupHandler(v0, grh)
 		nsi := namespace.NewNamespaceHandler(v0, nsh)
 		nwi := network.NewNetworkHandler(v0, nwh)
+		nnwi := nodenetwork.NewNodeNetworkHandler(v0, nnwh)
 		bsi := blockstorage.NewBlockStorageHandler(v0, bsh)
 		vmi := virtualmachine.NewVirtualMachineHandler(v0, vmh)
 		vri := virtualrouter.NewVirtualRouterHandler(v0, vrh)
@@ -113,6 +117,7 @@ func main() {
 		gri.RegisterHandlers()
 		nsi.RegisterHandlers()
 		nwi.RegisterHandlers()
+		nnwi.RegisterHandlers()
 		bsi.RegisterHandlers()
 		vmi.RegisterHandlers()
 		vri.RegisterHandlers()

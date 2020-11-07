@@ -1,53 +1,39 @@
 ---
 meta:
-  apiType: corev0/externalip
-  id: eip1
-  name: eip1
-  group: group1
-  namespace: ns1
-spec:
-  poolID: eippool
-  ipv4Address: 192.168.10.100
-  ipv4Prefix: 24
+  apiType: corev0/group
+  id: group2
+  name: grouphoge
 ---
 meta:
-  apiType: systemv0/network
+  apiType: corev0/namespace
+  id: ns10
+  group: group2
+  name: namespace10
+---
+meta:
+  apiType: corev0/network
   id: net1
   name: network1
-  group: group1
-  namespace: ns1
-  annotations:
-    networkv0/network_type: VXLAN
+  group: group2
+  namespace: ns10
 spec:
-  id: "100"
-  ipv4CIDR: 10.0.0.0/24
----
-meta:
-  apiType: systemv0/virtualrouter
-  id: vrouter1
-  name: virtualrouter1
-  group: group1
-  namespace: ns1
-  annotations:
-    virtualrouterv0/node_name: worker2
-spec:
-  externalGateway: 192.168.10.254
-  externalIPs:
-    - externalIPID: eip1
-      bindInternalIPv4Address: 10.0.0.1
-  natGatewayIP: 192.168.10.200
-  nics:
-    - networkID: net1
-      ipv4Address: 10.0.0.254/24
+  template:
+    meta:
+      apiType: systemv0/nodenetwork
+      annotations:
+        nodenetworkv0/network_type: VLAN
+    spec:
+      id: "100"
+      ipv4CIDR: 10.0.0.0/24
 ---
 meta:
   apiType: systemv0/blockstorage
   id: bs1
   name: blockstorage1
-  group: group1
-  namespace: ns1
+  group: group2
+  namespace: ns10
   annotations:
-    blockstoragev0/node_name: worker1
+    blockstoragev0/node_name: developvbox
     blockstoragev0/type: Local
 spec:
   requestSize: 1G
@@ -61,10 +47,10 @@ meta:
   apiType: systemv0/virtualmachine
   id: vm1
   name: virtualmachine1
-  group: group1
-  namespace: ns1
+  group: group2
+  namespace: ns10
   annotations:
-    virtualmachinev0/node_name: worker1
+    virtualmachinev0/node_name: developvbox
 spec:
   requestVcpus: 1000m
   limitVcpus: 1000m

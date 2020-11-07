@@ -128,6 +128,17 @@ func (a *BlockStorageAgent) Run() {
 									)
 									continue
 								}
+							} else if bs.Status.State == system.BlockStorageStateUsed && !isUsed {
+								bs.Status.State = system.BlockStorageStateActive
+								bs, err = a.client.SystemV0().BlockStorage().Update(bs)
+								if err != nil {
+									a.logger.Error(
+										"update blockstorage",
+										zap.String("msg", err.Error()),
+										zap.Time("time", time.Now()),
+									)
+									continue
+								}
 							}
 						}
 

@@ -4,8 +4,8 @@ import (
 	bsv0 "github.com/ophum/humstack/pkg/client/system/blockstorage/v0"
 	imv0 "github.com/ophum/humstack/pkg/client/system/image/v0"
 	iev0 "github.com/ophum/humstack/pkg/client/system/imageentity/v0"
-	netv0 "github.com/ophum/humstack/pkg/client/system/network/v0"
 	nodev0 "github.com/ophum/humstack/pkg/client/system/node/v0"
+	nodenetv0 "github.com/ophum/humstack/pkg/client/system/nodenetwork/v0"
 	vmv0 "github.com/ophum/humstack/pkg/client/system/virtualmachine/v0"
 	vrv0 "github.com/ophum/humstack/pkg/client/system/virtualrouter/v0"
 )
@@ -15,7 +15,7 @@ type SystemV0Clients struct {
 	apiServerPort    int32
 
 	nodeClient           *nodev0.NodeClient
-	networkClient        *netv0.NetworkClient
+	nodeNetworkClient    *nodenetv0.NodeNetworkClient
 	blockstorageClient   *bsv0.BlockStorageClient
 	virtualmachineClient *vmv0.VirtualMachineClient
 	virtualrouterClient  *vrv0.VirtualRouterClient
@@ -30,7 +30,7 @@ func NewSystemV0Clients(apiServerAddress string, apiServerPort int32) *SystemV0C
 		apiServerPort:    apiServerPort,
 
 		nodeClient:           nodeClient,
-		networkClient:        netv0.NewNetworkClient("http", apiServerAddress, apiServerPort),
+		nodeNetworkClient:    nodenetv0.NewNodeNetworkClient("http", apiServerAddress, apiServerPort),
 		blockstorageClient:   bsv0.NewBlockStorageClient("http", apiServerAddress, apiServerPort),
 		virtualmachineClient: vmv0.NewVirtualMachineClient("http", apiServerAddress, apiServerPort),
 		virtualrouterClient:  vrv0.NewVirtualRouterClient("http", apiServerAddress, apiServerPort),
@@ -43,8 +43,8 @@ func (c *SystemV0Clients) Node() *nodev0.NodeClient {
 	return c.nodeClient
 }
 
-func (c *SystemV0Clients) Network() *netv0.NetworkClient {
-	return c.networkClient
+func (c *SystemV0Clients) NodeNetwork() *nodenetv0.NodeNetworkClient {
+	return c.nodeNetworkClient
 }
 
 func (c *SystemV0Clients) BlockStorage() *bsv0.BlockStorageClient {

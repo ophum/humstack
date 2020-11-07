@@ -1,4 +1,4 @@
-package network
+package nodenetwork
 
 import (
 	"fmt"
@@ -6,12 +6,14 @@ import (
 	"time"
 
 	"github.com/n0stack/n0stack/n0core/pkg/driver/iproute2"
-	"github.com/ophum/humstack/pkg/agents/system/network/utils"
+	"github.com/ophum/humstack/pkg/agents/system/nodenetwork/utils"
+	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
+	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
 )
 
-func (a *NetworkAgent) syncVLANNetwork(network *system.Network) error {
+func (a *NodeNetworkAgent) syncVLANNetwork(network *system.NodeNetwork) error {
 
 	bridgeName := utils.GenerateName("hum-br-", network.Group+network.Namespace+network.ID)
 	vlanName := a.config.VLAN.DevName + "." + network.Spec.ID
@@ -33,12 +35,12 @@ func (a *NetworkAgent) syncVLANNetwork(network *system.Network) error {
 		} else {
 			if bridgeName != attachedBr.Attrs().Name {
 				// vlan id is already used
-				network.Status.Logs = append(network.Status.Logs, system.NetworkStatusLog{
+				network.Status.Logs = append(network.Status.Logs, system.NodeNetworkStatusLog{
 					NodeID:   a.node,
 					Datetime: time.Now().String(),
 					Log:      fmt.Sprintf("vlan id `%s` is already used.", network.Spec.ID),
 				})
-				if _, err := a.client.SystemV0().Network().Update(network); err != nil {
+				if _, err := a.client.SystemV0().NodeNetwork().Update(network); err != nil {
 					return err
 				}
 				return fmt.Errorf("vlan id `%s` is already used.", network.Spec.ID)
@@ -70,6 +72,22 @@ func (a *NetworkAgent) syncVLANNetwork(network *system.Network) error {
 	if err != nil {
 		return err
 	}
+
+	// 削除処理
+	if network.DeleteState == meta.DeleteStateDelete {
+		if err := vlan.Delete(); err != nil {
+			return errors.Wrap(err, "delete vlan")
+		}
+
+		if err := br.Delete(); err != nil {
+			return errors.Wrap(err, "delete bridge")
+		}
+		if err := a.client.SystemV0().NodeNetwork().Delete(network.Group, network.Namespace, network.ID); err != nil {
+			return errors.Wrap(err, "delete node network")
+		}
+		return nil
+	}
+
 	err = vlan.SetMaster(br)
 	if err != nil {
 		return err
@@ -77,6 +95,7 @@ func (a *NetworkAgent) syncVLANNetwork(network *system.Network) error {
 
 	network.Annotations[NetworkV0AnnotationBridgeName] = bridgeName
 	network.Annotations[NetworkV0AnnotationVLANName] = vlanName
+	network.Status.State = system.NetworkStateAvailable
 
 	return setHash(network)
 }

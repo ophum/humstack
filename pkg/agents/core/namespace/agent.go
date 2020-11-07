@@ -82,6 +82,15 @@ func (a *NamespaceAgent) Run() {
 					} else if n != 0 {
 						isDeletable = false
 					}
+					if n, err := a.nodeNetworksSetDeleteState(ns); err != nil {
+						a.logger.Error(
+							"set node network delete state",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()),
+						)
+					} else if n != 0 {
+						isDeletable = false
+					}
 					if n, err := a.virtualRoutersSetDeleteState(ns); err != nil {
 						a.logger.Error(
 							"set virtualrouter delete state",
@@ -142,7 +151,7 @@ func (a *NamespaceAgent) blockStoragesSetDeleteState(ns *core.Namespace) (int, e
 }
 
 func (a *NamespaceAgent) networksSetDeleteState(ns *core.Namespace) (int, error) {
-	netList, err := a.client.SystemV0().Network().List(ns.Group, ns.ID)
+	netList, err := a.client.CoreV0().Network().List(ns.Group, ns.ID)
 	if err != nil {
 		return -1, err
 	}
@@ -152,12 +161,28 @@ func (a *NamespaceAgent) networksSetDeleteState(ns *core.Namespace) (int, error)
 			continue
 		}
 
-		_ = a.client.SystemV0().Network().DeleteState(net.Group, net.Namespace, net.ID)
+		_ = a.client.CoreV0().Network().DeleteState(net.Group, net.Namespace, net.ID)
 	}
 
 	return len(netList), nil
 }
 
+func (a *NamespaceAgent) nodeNetworksSetDeleteState(ns *core.Namespace) (int, error) {
+	netList, err := a.client.SystemV0().NodeNetwork().List(ns.Group, ns.ID)
+	if err != nil {
+		return -1, err
+	}
+
+	for _, net := range netList {
+		if net.DeleteState == meta.DeleteStateDelete {
+			continue
+		}
+
+		_ = a.client.SystemV0().NodeNetwork().DeleteState(net.Group, net.Namespace, net.ID)
+	}
+
+	return len(netList), nil
+}
 func (a *NamespaceAgent) virtualRoutersSetDeleteState(ns *core.Namespace) (int, error) {
 	vrList, err := a.client.SystemV0().VirtualRouter().List(ns.Group, ns.ID)
 	if err != nil {
