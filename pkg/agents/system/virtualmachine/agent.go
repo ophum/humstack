@@ -93,6 +93,11 @@ func (a *VirtualMachineAgent) Run() {
 						if vm.Annotations[VirtualMachineV0AnnotationNodeName] != a.nodeName {
 							continue
 						}
+
+						// agentは無視する
+						if ignore, ok := vm.Annotations["virtualmachinev0/ignore"]; ok && ignore == "true" {
+							continue
+						}
 						err = a.syncVirtualMachine(vm)
 						if err != nil {
 							a.logger.Error(
