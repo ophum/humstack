@@ -3,7 +3,7 @@ apiServerPort: 8080
 agentMode: All  # All, Core, System
 limitMemory: 8G
 limitVcpus: 8000m
-nodeAddress: localhost
+nodeAddress: 192.168.10.3
 
 blockStorageAgentConfig:
   blockStorageDirPath: ./blockstorages

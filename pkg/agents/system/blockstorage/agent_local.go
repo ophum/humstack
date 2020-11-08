@@ -200,6 +200,10 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 		bs.Status.State == system.BlockStorageStateCopying ||
 		bs.Status.State == system.BlockStorageStateDownloading {
 		bs.Status.State = system.BlockStorageStateActive
+
+		if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+			return err
+		}
 	}
 	return setHash(bs)
 }

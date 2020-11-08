@@ -168,6 +168,10 @@ func (a *NetworkAgent) syncNetwork(net *core.Network) error {
 				},
 				Spec: net.Spec.Template.Spec,
 			}
+
+			if nodeNet.Annotations == nil {
+				nodeNet.Annotations = map[string]string{}
+			}
 			nodeNet.Annotations["nodenetworkv0/node_name"] = node.ID
 			if _, err := a.client.SystemV0().NodeNetwork().Create(nodeNet); err != nil {
 				a.logger.Error(
