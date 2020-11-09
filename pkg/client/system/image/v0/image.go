@@ -148,6 +148,10 @@ func (c *ImageClient) Download(groupID, imageID, tag string) (io.ReadCloser, err
 		return nil, err
 	}
 
+	if resp.StatusCode/100 != 2 {
+		return nil, fmt.Errorf("not found")
+	}
+
 	return resp.Body, nil
 }
 

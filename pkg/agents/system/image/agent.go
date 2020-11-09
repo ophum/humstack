@@ -157,9 +157,9 @@ func (a *ImageAgent) syncLocalImageEntity(imageEntity *system.ImageEntity, bs *s
 		return err
 	}
 
-	if bs.Status.State != system.BlockStorageStateActive {
-		return nil
-	}
+	//if bs.Status.State != system.BlockStorageStateActive {
+	//	return nil
+	//}
 
 	imageEntity.Status.State = system.ImageEntityStateCopying
 	if _, err := a.client.SystemV0().ImageEntity().Update(imageEntity); err != nil {

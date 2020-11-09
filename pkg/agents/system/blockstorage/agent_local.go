@@ -22,7 +22,7 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 	if fileIsExists(path) {
 		// 削除処理
 		if bs.DeleteState == meta.DeleteStateDelete {
-			if bs.Status.State != system.BlockStorageStateActive {
+			if bs.Status.State != "" && bs.Status.State != system.BlockStorageStateActive {
 				return nil
 			}
 			bs.Status.State = system.BlockStorageStateDeleting
