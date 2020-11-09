@@ -158,6 +158,8 @@ const (
 type VirtualMachineSpec struct {
 	UUID string `json:"uuid" yaml:"uuid"`
 
+	Hostname string `json:"hostname" yaml:"hostname"`
+
 	RequestVcpus string `json:"requestVcpus" yaml:"requestVcpus"`
 	LimitVcpus   string `json:"limitVcpus" yaml:"limitVcpus"`
 

@@ -260,7 +260,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 
 	metaData := cloudinit.MetaData{
 		InstanceID:    vm.Spec.UUID,
-		LocalHostName: vm.Name,
+		LocalHostName: vm.Spec.Hostname,
 	}
 
 	userDataUsers := []cloudinit.UserDataUser{}
