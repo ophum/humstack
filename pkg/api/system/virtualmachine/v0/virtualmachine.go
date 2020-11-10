@@ -153,8 +153,6 @@ func (h *VirtualMachineHandler) ConsoleWebSocketProxy(ctx *gin.Context) {
 	groupID, nsID, vmID := getIDs(ctx)
 
 	key := getKey(groupID, nsID, vmID)
-	h.store.Lock(key)
-	defer h.store.Unlock(key)
 
 	vm := system.VirtualMachine{}
 	if err := h.store.Get(key, &vm); err != nil {
