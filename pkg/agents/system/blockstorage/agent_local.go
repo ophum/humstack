@@ -19,30 +19,35 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 	dirPath := filepath.Join(a.localBlockStorageDirectory, bs.Group, bs.Namespace)
 	path := filepath.Join(dirPath, bs.ID)
 
-	if fileIsExists(path) {
-		// 削除処理
-		if bs.DeleteState == meta.DeleteStateDelete {
-			if bs.Status.State != "" && bs.Status.State != system.BlockStorageStateActive {
-				return nil
-			}
-			bs.Status.State = system.BlockStorageStateDeleting
-			_, err := a.client.SystemV0().BlockStorage().Update(bs)
-			if err != nil {
-				return err
-			}
+	// 削除処理
+	if bs.DeleteState == meta.DeleteStateDelete {
+		if bs.Status.State != "" &&
+			bs.Status.State != system.BlockStorageStateError &&
+			bs.Status.State != system.BlockStorageStateActive {
+			return nil
+		}
+		bs.Status.State = system.BlockStorageStateDeleting
+		_, err := a.client.SystemV0().BlockStorage().Update(bs)
+		if err != nil {
+			return err
+		}
 
+		if fileIsExists(path) {
 			err = os.Remove(path)
 			if err != nil {
 				return err
 			}
-
-			err = a.client.SystemV0().BlockStorage().Delete(bs.Group, bs.Namespace, bs.ID)
-			if err != nil {
-				return err
-			}
-
-			return nil
 		}
+
+		err = a.client.SystemV0().BlockStorage().Delete(bs.Group, bs.Namespace, bs.ID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	if fileIsExists(path) {
 		if bs.Status.State == "" || bs.Status.State == system.BlockStorageStatePending {
 			bs.Status.State = system.BlockStorageStateActive
 		}
@@ -76,6 +81,10 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 		}
 		cmd := exec.Command(command, args...)
 		if _, err := cmd.CombinedOutput(); err != nil {
+			bs.Status.State = system.BlockStorageStateError
+			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+				return err
+			}
 			return err
 		}
 	case system.BlockStorageFromTypeHTTP:
@@ -86,22 +95,38 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 
 		res, err := http.Get(bs.Spec.From.HTTP.URL)
 		if err != nil {
+			bs.Status.State = system.BlockStorageStateError
+			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+				return err
+			}
 			return err
 		}
 		defer res.Body.Close()
 
 		file, err := os.Create(path)
 		if err != nil {
+			bs.Status.State = system.BlockStorageStateError
+			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+				return err
+			}
 			return err
 		}
 
 		_, err = io.Copy(file, res.Body)
 		if err != nil {
+			bs.Status.State = system.BlockStorageStateError
+			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+				return err
+			}
 			return err
 		}
 
 		err = file.Close()
 		if err != nil {
+			bs.Status.State = system.BlockStorageStateError
+			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+				return err
+			}
 			return err
 		}
 
@@ -113,16 +138,28 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 		}
 		cmd := exec.Command(command, args...)
 		if out, err := cmd.CombinedOutput(); err != nil {
+			bs.Status.State = system.BlockStorageStateError
+			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+				return err
+			}
 			return errors.Wrap(err, string(out))
 		}
 	case system.BlockStorageFromTypeBaseImage:
 		image, err := a.client.SystemV0().Image().Get(bs.Group, bs.Spec.From.BaseImage.ImageName)
 		if err != nil {
+			bs.Status.State = system.BlockStorageStateError
+			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+				return err
+			}
 			return err
 		}
 
 		imageEntity, ok := image.Spec.EntityMap[bs.Spec.From.BaseImage.Tag]
 		if !ok {
+			bs.Status.State = system.BlockStorageStateError
+			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+				return err
+			}
 			return fmt.Errorf("Image Entity not found")
 		}
 
@@ -130,6 +167,10 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 		if !fileIsExists(srcDirPath) {
 			err := os.MkdirAll(srcDirPath, 0755)
 			if err != nil {
+				bs.Status.State = system.BlockStorageStateError
+				if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+					return err
+				}
 				return err
 			}
 		}
@@ -141,38 +182,66 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 			err := func() error {
 				src, err := os.Create(srcPath)
 				if err != nil {
+					bs.Status.State = system.BlockStorageStateError
+					if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+						return err
+					}
 					return err
 				}
 				defer src.Close()
 
 				stream, err := a.client.SystemV0().Image().Download(bs.Group, bs.Spec.From.BaseImage.ImageName, bs.Spec.From.BaseImage.Tag)
 				if err != nil {
+					bs.Status.State = system.BlockStorageStateError
+					if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+						return err
+					}
 					return err
 				}
 				defer stream.Close()
 
 				if _, err := io.Copy(src, stream); err != nil {
+					bs.Status.State = system.BlockStorageStateError
+					if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+						return err
+					}
 					return err
 				}
 				return nil
 			}()
 			if err != nil {
+				bs.Status.State = system.BlockStorageStateError
+				if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+					return err
+				}
 				return err
 			}
 		}
 		src, err := os.Open(srcPath)
 		if err != nil {
+			bs.Status.State = system.BlockStorageStateError
+			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+				return err
+			}
 			return err
 		}
 		defer src.Close()
 
 		dest, err := os.Create(path)
 		if err != nil {
+			bs.Status.State = system.BlockStorageStateError
+			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+				return err
+			}
 			return err
 		}
 		defer dest.Close()
 
 		if _, err := io.Copy(dest, src); err != nil {
+			bs.Status.State = system.BlockStorageStateError
+			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+				return err
+			}
 			return err
 		}
 
@@ -185,6 +254,10 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 		cmd := exec.Command(command, args...)
 		if _, err := cmd.CombinedOutput(); err != nil {
 			log.Println(err.Error())
+			bs.Status.State = system.BlockStorageStateError
+			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+				return err
+			}
 			return err
 		}
 	}

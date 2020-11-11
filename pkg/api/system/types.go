@@ -122,6 +122,7 @@ const (
 	BlockStorageStateCopying     BlockStorageState = "Copying"
 	BlockStorageStateDownloading BlockStorageState = "Downloading"
 	BlockStorageStateReserved    BlockStorageState = "Reserved"
+	BlockStorageStateError       BlockStorageState = "Error"
 )
 
 type BlockStorageStatus struct {
