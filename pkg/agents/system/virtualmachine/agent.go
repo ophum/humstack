@@ -94,10 +94,6 @@ func (a *VirtualMachineAgent) Run() {
 							continue
 						}
 
-						// agentは無視する
-						if ignore, ok := vm.Annotations["virtualmachinev0/ignore"]; ok && ignore == "true" {
-							continue
-						}
 						err = a.syncVirtualMachine(vm)
 						if err != nil {
 							a.logger.Error(
@@ -416,6 +412,11 @@ func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) erro
 		}
 		return nil
 	}
+
+	if ignore, ok := vm.Annotations["virtualmachinev0/ignore"]; ok && ignore == "true" {
+		return nil
+	}
+
 	switch vm.Spec.ActionState {
 	case system.VirtualMachineActionStatePowerOn:
 		err := a.powerOnVirtualMachine(vm)
