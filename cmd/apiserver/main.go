@@ -45,11 +45,13 @@ import (
 var (
 	listenAddress string
 	listenPort    int64
+	isDebug       bool
 )
 
 func init() {
 	flag.StringVar(&listenAddress, "listen-address", "localhost", "listen address")
 	flag.Int64Var(&listenPort, "listen-port", 8080, "listen port")
+	flag.BoolVar(&isDebug, "debug", false, "debug mode true/false")
 	flag.Parse()
 }
 
@@ -61,7 +63,7 @@ func main() {
 
 	notifier := make(chan string, 100)
 	//s := store.NewMemoryStore()
-	s, err := store.NewLevelDBStore("./database", notifier)
+	s, err := store.NewLevelDBStore("./database", notifier, isDebug)
 	if err != nil {
 		log.Fatal(err)
 	}

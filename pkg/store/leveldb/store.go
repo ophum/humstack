@@ -25,9 +25,10 @@ type LevelDBStore struct {
 	db        *leveldb.DB
 	lockTable map[string]*sync.RWMutex
 	notifier  chan string
+	isDebug   bool
 }
 
-func NewLevelDBStore(dirPath string, notifier chan string) (*LevelDBStore, error) {
+func NewLevelDBStore(dirPath string, notifier chan string, isDebug bool) (*LevelDBStore, error) {
 	db, err := leveldb.OpenFile(filepath.Join(dirPath, "database.leveldb"), nil)
 	if err != nil {
 		return nil, err
@@ -37,6 +38,7 @@ func NewLevelDBStore(dirPath string, notifier chan string) (*LevelDBStore, error
 		db:        db,
 		lockTable: map[string]*sync.RWMutex{},
 		notifier:  notifier,
+		isDebug:   isDebug,
 	}, nil
 }
 
@@ -100,8 +102,10 @@ func (s *LevelDBStore) Put(key string, data interface{}) {
 		return
 	}
 
-	fmt.Println("=============== PUT  ==================")
-	s.printDB()
+	if s.isDebug {
+		fmt.Println("=============== PUT  ==================")
+		s.printDB()
+	}
 
 	obj := meta.Object{}
 	if len(before) == 0 {
@@ -146,8 +150,10 @@ func (s *LevelDBStore) Delete(key string) {
 		return
 	}
 
-	fmt.Println("============== DELETE ================")
-	s.printDB()
+	if s.isDebug {
+		fmt.Println("============== DELETE ================")
+		s.printDB()
+	}
 
 	noticeJSON, err := json.Marshal(NoticeData{
 		Key:     key,
