@@ -182,8 +182,11 @@ func (h *VirtualMachineHandler) ConsoleWebSocketProxy(ctx *gin.Context) {
 		Backend: func(*http.Request) *url.URL {
 			return backendURL
 		},
+		Director: func(req *http.Request, out http.Header) {
+			out.Set("Host", req.Host)
+		},
 	}
-	delete(ctx.Request.Header, "Origin")
+
 	ws.ServeHTTP(ctx.Writer, ctx.Request)
 }
 
