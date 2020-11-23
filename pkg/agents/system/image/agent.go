@@ -13,6 +13,7 @@ import (
 	"github.com/ophum/humstack/pkg/agents/system/blockstorage"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -195,6 +196,10 @@ func (a *ImageAgent) syncLocalImageEntity(imageEntity *system.ImageEntity, bs *s
 	}
 
 	hasher := sha256.New()
+	if _, err := dest.Seek(0, 0); err != nil {
+		return errors.Wrap(err, "seek dest file cursor")
+	}
+
 	if _, err := io.Copy(hasher, dest); err != nil {
 		return err
 	}
