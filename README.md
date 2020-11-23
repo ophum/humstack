@@ -51,6 +51,9 @@ agentMode: All
 limitMemory: 8G
 limitVcpus: 8000m
 
+# nodeのアドレス
+nodeAddress: 192.168.10.1
+
 # blockStorageAgentの設定
 blockStorageAgentConfig:
   # blockstorageを保存する場所
