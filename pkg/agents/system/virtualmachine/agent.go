@@ -56,6 +56,7 @@ func (a *VirtualMachineAgent) Run() {
 	for {
 		select {
 		case <-ticker.C:
+			usedDisplayMap := map[int32]bool{}
 			grList, err := a.client.CoreV0().Group().List()
 			if err != nil {
 				a.logger.Error(
@@ -117,6 +118,36 @@ func (a *VirtualMachineAgent) Run() {
 							)
 							continue
 						}
+
+						// 使用しているVNCディスプレイ番号のmapを作成
+						if vm.Status.State == system.VirtualMachineStateRunning {
+							usedDisplayNumber, err := strconv.ParseInt(vm.Annotations["virtualmachinev0/vnc_display_number"], 10, 32)
+							if err != nil {
+								a.logger.Error(
+									"parse int used dispaly number",
+									zap.String("msg", err.Error()),
+									zap.Time("time", time.Now()),
+								)
+								continue
+
+							}
+							usedDisplayMap[int32(usedDisplayNumber)] = true
+						}
+					}
+				}
+			}
+
+			// 使用VNCディスプレイ番号の情報をsync
+			for displayNumber := int32(0); displayNumber <= 1000; displayNumber++ {
+				if _, ok := a.vncDisplayMap[displayNumber]; ok {
+					// agent情報で使用されているが実際のVM情報では使用されていない場合
+					if _, used := usedDisplayMap[displayNumber]; !used {
+						delete(a.vncDisplayMap, displayNumber)
+					}
+				} else {
+					// agent情報で使用されていないが実際のVM情報で使用されている場合
+					if _, used := usedDisplayMap[displayNumber]; used {
+						a.vncDisplayMap[displayNumber] = true
 					}
 				}
 			}
@@ -170,7 +201,15 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		return err
 	}
 
-	if pid != -1 && vm.Status.State == system.VirtualMachineStateRunning {
+	// すでにqemuが起動している
+	if pid != -1 {
+		// stateがRunning以外ならRunningにする
+		if vm.Status.State != system.VirtualMachineStateRunning {
+			vm.Status.State = system.VirtualMachineStateRunning
+			if _, err := a.client.SystemV0().VirtualMachine().Update(vm); err != nil {
+				return errors.Wrap(err, "update vm state")
+			}
+		}
 		return nil
 	}
 
