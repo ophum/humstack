@@ -120,7 +120,7 @@ func (a *VirtualMachineAgent) Run() {
 						}
 
 						// 使用しているVNCディスプレイ番号のmapを作成
-						if vm.Status.State == system.VirtualMachineStateRunning {
+						if _, ok := vm.Annotations["virtualmachinev0/vnc_display_number"]; ok {
 							usedDisplayNumber, err := strconv.ParseInt(vm.Annotations["virtualmachinev0/vnc_display_number"], 10, 32)
 							if err != nil {
 								a.logger.Error(
