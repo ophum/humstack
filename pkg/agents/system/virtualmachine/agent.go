@@ -105,20 +105,6 @@ func (a *VirtualMachineAgent) Run() {
 							continue
 						}
 
-						if vm.ResourceHash == oldHash {
-							continue
-						}
-
-						_, err := a.client.SystemV0().VirtualMachine().Update(vm)
-						if err != nil {
-							a.logger.Error(
-								"update virtualmachine",
-								zap.String("msg", err.Error()),
-								zap.Time("time", time.Now()),
-							)
-							continue
-						}
-
 						// 使用しているVNCディスプレイ番号のmapを作成
 						if _, ok := vm.Annotations["virtualmachinev0/vnc_display_number"]; ok {
 							usedDisplayNumber, err := strconv.ParseInt(vm.Annotations["virtualmachinev0/vnc_display_number"], 10, 32)
@@ -132,6 +118,20 @@ func (a *VirtualMachineAgent) Run() {
 
 							}
 							usedDisplayMap[int32(usedDisplayNumber)] = true
+						}
+
+						if vm.ResourceHash == oldHash {
+							continue
+						}
+
+						_, err := a.client.SystemV0().VirtualMachine().Update(vm)
+						if err != nil {
+							a.logger.Error(
+								"update virtualmachine",
+								zap.String("msg", err.Error()),
+								zap.Time("time", time.Now()),
+							)
+							continue
 						}
 					}
 				}
