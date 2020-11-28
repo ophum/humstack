@@ -9,4 +9,5 @@ type BlockStorageAgentConfig struct {
 	DownloadAPI         BlockStorageAgentDownloadAPIConfig `yaml:"downloadAPI"`
 	BlockStorageDirPath string                             `yaml:"blockStorageDirPath"`
 	ImageDirPath        string                             `yaml:"imageDirPath"`
+	CephPoolName        string                             `yaml:"cephPoolName"`
 }

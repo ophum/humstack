@@ -27,6 +27,7 @@ const (
 
 const (
 	BlockStorageV0BlockStorageTypeLocal = "Local"
+	BlockStorageV0BlockStorageTypeCeph  = "Ceph"
 )
 
 func NewBlockStorageAgent(client *client.Clients, config *BlockStorageAgentConfig, logger *zap.Logger) *BlockStorageAgent {
@@ -149,6 +150,20 @@ func (a *BlockStorageAgent) Run() {
 							}
 
 							err = a.syncLocalBlockStorage(bs)
+							if err != nil {
+								a.logger.Error(
+									"sync local blockstorage",
+									zap.String("msg", err.Error()),
+									zap.Time("time", time.Now()),
+								)
+								continue
+							}
+						case BlockStorageV0BlockStorageTypeCeph:
+							if bs.Annotations[BlockStorageV0AnnotationNodeName] != nodeName {
+								continue
+							}
+
+							err = a.syncCephBlockStorage(bs)
 							if err != nil {
 								a.logger.Error(
 									"sync local blockstorage",
