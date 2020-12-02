@@ -12,6 +12,9 @@ blockStorageAgentConfig:
     advertiseAddress: 192.168.10.3
     listenAddress: 0.0.0.0
     listenPort: 8082
+  cephBackend:
+    configPath: /etc/ceph/ceph.conf
+    poolName: test-pool
 networkAgentConfig:
   vxlan:
     devName: enp0s8

@@ -1,0 +1,16 @@
+meta:
+  apiType: systemv0/blockstorage
+  id: bs1
+  name: blockstorage1-ceph
+  group: group1
+  namespace: hge
+  annotations:
+    blockstoragev0/node_name: X1Carbon
+    blockstoragev0/type: Ceph
+spec:
+  requestSize: 1G
+  limitSize: 10G
+  from:
+    type: HTTP
+    http:
+      url: http://localhost:8888/empty.img
