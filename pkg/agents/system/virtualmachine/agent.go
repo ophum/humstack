@@ -230,10 +230,30 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 			return fmt.Errorf("BlockStorage is not active")
 		}
 
-		disks = append(disks,
-			"-drive",
-			fmt.Sprintf("file=./blockstorages/%s/%s/%s,format=qcow2", vm.Group, vm.Namespace, bs.ID),
-		)
+		// bsのtypeがCephの場合
+		if t, ok := bs.Annotations["blockstoragev0/type"]; ok && t == "Ceph" {
+			cephPoolName, ok := bs.Annotations["ceph-pool-name"]
+			if !ok {
+				vm.Status.State = system.VirtualMachineStatePending
+				return fmt.Errorf("BlockStorage is not active")
+			}
+
+			cephImageName, ok := bs.Annotations["ceph-image-name"]
+			if !ok {
+				vm.Status.State = system.VirtualMachineStatePending
+				return fmt.Errorf("BlockStorage is not active")
+			}
+
+			disks = append(disks,
+				"-drive",
+				fmt.Sprintf("file=rbd:%s,format=qcow2", filepath.Join(cephPoolName, cephImageName)),
+			)
+		} else { // Cephでない場合はLocalになる
+			disks = append(disks,
+				"-drive",
+				fmt.Sprintf("file=./blockstorages/%s/%s/%s,format=qcow2", vm.Group, vm.Namespace, bs.ID),
+			)
+		}
 	}
 
 	vcpus := withUnitToWithoutUnit(vm.Spec.LimitVcpus)

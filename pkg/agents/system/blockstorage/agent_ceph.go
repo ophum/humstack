@@ -70,6 +70,16 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 		return nil
 	}
 
+	// イメージが存在するならsukip
+	if a.cephImageIsExists(bs) {
+		if bs.Status.State == "" ||
+			bs.Status.State == system.BlockStorageStatePending ||
+			bs.Status.State == system.BlockStorageStateError {
+			bs.Status.State = system.BlockStorageStateActive
+		}
+
+		return setHash(bs)
+	}
 	// コピー中・ダウンロード中の場合はskip
 	switch bs.Status.State {
 	case system.BlockStorageStateCopying:
@@ -329,6 +339,38 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 		}
 	}
 	return setHash(bs)
+}
+
+func (a BlockStorageAgent) cephImageIsExists(bs *system.BlockStorage) bool {
+	// typeがCephでない
+	if t, ok := bs.Annotations[BlockStorageV0AnnotationType]; ok && t != BlockStorageV0BlockStorageTypeCeph {
+		return false
+	}
+
+	imageName, ok := bs.Annotations["ceph-image-name"]
+	// ceph-image-nameが設定されていない
+	if !ok {
+		return false
+	}
+
+	conn, err := a.newCephConn()
+	if err != nil {
+		return false
+	}
+	defer conn.Shutdown()
+
+	ioctx, err := conn.OpenIOContext(a.config.CephBackend.PoolName)
+	if err != nil {
+		return false
+	}
+	defer ioctx.Destroy()
+
+	if image, err := rbd.OpenImageReadOnly(ioctx, imageName, ""); err != nil {
+		return false
+	} else {
+		defer image.Close()
+	}
+	return true
 }
 
 func (a BlockStorageAgent) newCephConn() (*rados.Conn, error) {
