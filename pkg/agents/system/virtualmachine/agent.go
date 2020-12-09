@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net"
@@ -387,6 +388,51 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		"VGA,id=video0,bus=pci.0",
 	}
 
+	// TODO: x86_64とaarchの起動処理を分ける
+	// とりあえず
+	// annotationsでaarch64が指定されている場合
+	// -cpu cortex-a57
+	// -M virt
+	// -bios ./virtualmachines/{group}/{namespace}/{uuid}/QEMU_EFI.fd
+	// QEMU_EFI.fdは/usr/share/qemu-efi-aarch64.QEMU_EFI.fdからコピーする
+	if vm.Group == "group1" && vm.Namespace == "test" {
+		log.Printf("\n\n=====\n%v\n", vm)
+	}
+	if arch, ok := vm.Annotations["virtualmachinev0/arch"]; ok && arch == "aarch64" {
+		command = "qemu-system-aarch64"
+		args[12] = "cortex-a57"
+		args = args[1 : len(args)-1]
+		args = append(args,
+			"virtio-vga",
+			"-M",
+			"virt",
+			"-bios",
+			fmt.Sprintf("./virtualmachines/%s/%s/%s/QEMU_EFI.fd", vm.Group, vm.Namespace, vm.Spec.UUID),
+		)
+
+		err := func() error {
+			src, err := os.Open("/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
+			if err != nil {
+				return err
+			}
+			defer src.Close()
+
+			dest, err := os.Create(fmt.Sprintf("./virtualmachines/%s/%s/%s/QEMU_EFI.fd", vm.Group, vm.Namespace, vm.Spec.UUID))
+			if err != nil {
+				return err
+			}
+			defer dest.Close()
+
+			if _, err := io.Copy(dest, src); err != nil {
+				return err
+			}
+			return nil
+		}()
+		if err != nil {
+			return err
+		}
+
+	}
 	args = append(args, disks...)
 	args = append(args, nics...)
 

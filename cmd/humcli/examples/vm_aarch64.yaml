@@ -1,0 +1,67 @@
+---
+meta:
+  apiType: corev0/namespace
+  id: test
+  group: group1
+  name: test
+---
+meta:
+  apiType: corev0/network
+  id: net1
+  name: network1
+  group: group1
+  namespace: test
+spec:
+  template:
+    meta:
+      annotations:
+        nodenetworkv0/network_type: Bridge
+        nodenetworkv0/default_gateway: 10.0.0.254/24
+    spec:
+      id: "100"
+      ipv4CIDR: 10.0.0.0/24
+---
+meta:
+  apiType: systemv0/blockstorage
+  id: bs_ubuntu_aarch64
+  name: bs_ubuntu_aarch64
+  group: group1
+  namespace: test
+  annotations:
+    blockstoragev0/node_name: X1Carbon
+    blockstoragev0/type: Local
+spec:
+  requestSize: 1G
+  limitSize: 10G
+  from:
+    type: HTTP
+    http:
+      url: http://localhost:8888/focal-server-cloudimg-arm64.img
+---
+meta:
+  apiType: systemv0/virtualmachine
+  id: vm_ubuntu_aarch64
+  name: vm_ubuntu_aarch64
+  group: group1
+  namespace: test
+  annotations:
+    virtualmachinev0/node_name: X1Carbon
+    virtualmachinev0/arch: aarch64
+spec:
+  requestVcpus: 1000m
+  limitVcpus: 2000m
+  requestMemory: 1G
+  limitMemory: 2G
+  blockStorageIDs:
+    - bs_ubuntu_aarch64
+  nics:
+    - networkID: net1
+      ipv4Address: 10.0.0.1
+      nameservers:
+        - 8.8.8.8
+      defaultGateway: 10.0.0.254
+  actionState: PowerOn
+  loginUsers:
+    - username: test
+      sshAuthorizedKeys:
+        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCsf7CDppU1lSzUbsmszAXX/rAXdGxB71i93IsZtV4omO/uRz/z6dLIsBidf9vIqcEfCFTFR00ULC+GKULTNz2LOaGnGsDS28Bi5u+cx90+BCAzEg6cBwPIYmdZgASsjMmRvI/r+xR/gNxq2RCR8Gl8y5voAWoU8aezRUxf1Ra3KljMd1dbIFGJxgzNiwqN3yL0tr9zActw/Q7yBWKWi1c5sW2QZLAnSj/WWTSGGm0Ad88Aq22DakwN6itUkS6XNhr4YKehLVm90fIojrCrtZmClULAlnUk5lbdzou4jiETsZz3zk/q76ZQ3ugk+G00kcx9v6ElLkAFv2ZZqzWbMvUz6J0k2SzkAIbcBDz+aq2sXeY04FaIOFPiH41+DTQXCtOskWkaJBMKLTE/Z83nSyQGr9If2F/PbnuxGkwiZzeZaLWxqI2SebhLR5jPETgfhB1y83RP6u8Jq5+9BUURFqpb8mfG/riTnAj0ZR4Li23+/hWhc8We+fVB1BxdbWyRn/M=
