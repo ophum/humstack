@@ -8,6 +8,7 @@ nodeAddress: 192.168.10.3
 blockStorageAgentConfig:
   blockStorageDirPath: ./blockstorages
   imageDirPath: ./images
+  parallelLimit: 1
   downloadAPI:
     advertiseAddress: 192.168.10.3
     listenAddress: 0.0.0.0
