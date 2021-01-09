@@ -323,24 +323,26 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		}
 		_, ipnet, err := net.ParseCIDR(n.Spec.Template.Spec.IPv4CIDR)
 
+		subnets := []cloudinit.NetworkConfigConfigSubnet{}
+		if nic.IPv4Address != "" {
+			subnets = append(subnets, cloudinit.NetworkConfigConfigSubnet{
+				Type:    cloudinit.NetworkConfigConfigSubnetTypeStatic,
+				Address: nic.IPv4Address,
+				Netmask: fmt.Sprintf("%d.%d.%d.%d",
+					ipnet.Mask[0],
+					ipnet.Mask[1],
+					ipnet.Mask[2],
+					ipnet.Mask[3],
+				),
+				Nameservers: nic.Nameservers,
+				Gateway:     nic.DefaultGateway,
+			})
+		}
 		networkConfigConfigs = append(networkConfigConfigs, cloudinit.NetworkConfigConfig{
 			Type:       cloudinit.NetworkConfigConfigTypePhysical,
 			Name:       fmt.Sprintf("eth%d", i),
 			MacAddress: nic.MacAddress,
-			Subnets: []cloudinit.NetworkConfigConfigSubnet{
-				{
-					Type:    cloudinit.NetworkConfigConfigSubnetTypeStatic,
-					Address: nic.IPv4Address,
-					Netmask: fmt.Sprintf("%d.%d.%d.%d",
-						ipnet.Mask[0],
-						ipnet.Mask[1],
-						ipnet.Mask[2],
-						ipnet.Mask[3],
-					),
-					Nameservers: nic.Nameservers,
-					Gateway:     nic.DefaultGateway,
-				},
-			},
+			Subnets:    subnets,
 		})
 	}
 	networkConfig := cloudinit.NetworkConfig{
