@@ -145,6 +145,12 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 			return errors.Wrap(err, string(out))
 		}
 	case system.BlockStorageFromTypeBaseImage:
+
+		bs.Status.State = system.BlockStorageStateCopying
+		if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+			return err
+		}
+
 		image, err := a.client.SystemV0().Image().Get(bs.Group, bs.Spec.From.BaseImage.ImageName)
 		if err != nil {
 			bs.Status.State = system.BlockStorageStateError

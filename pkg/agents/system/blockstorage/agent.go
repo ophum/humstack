@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/ophum/humstack/pkg/api/system"
@@ -67,6 +68,8 @@ func (a *BlockStorageAgent) Run() {
 				)
 				continue
 			}
+
+			wg := sync.WaitGroup{}
 			for _, group := range grList {
 				nsList, err := a.client.CoreV0().Namespace().List(group.ID)
 				if err != nil {
@@ -110,9 +113,13 @@ func (a *BlockStorageAgent) Run() {
 						if err != nil {
 							continue
 						}
+						wg.Add(1)
 
 						go func(bs *system.BlockStorage) {
-							defer a.parallelSemaphore.Release(1)
+							defer func() {
+								a.parallelSemaphore.Release(1)
+								wg.Done()
+							}()
 							oldHash := bs.ResourceHash
 
 							// state check
@@ -186,6 +193,7 @@ func (a *BlockStorageAgent) Run() {
 					}
 				}
 			}
+			wg.Wait()
 		}
 	}
 }
