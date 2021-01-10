@@ -19,4 +19,4 @@ run-apiserver:
 	$(GO) run cmd/apiserver/main.go --listen-address 0.0.0.0
 
 run-agent:
-	sudo $(GO) run cmd/agent/main.go --config cmd/agent/config.yaml.sample
+	sudo $(GO) run cmd/agent/main.go --config cmd/agent/config.yaml
