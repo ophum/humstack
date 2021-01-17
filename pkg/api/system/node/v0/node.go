@@ -112,9 +112,11 @@ func (h *NodeHandler) Update(ctx *gin.Context) {
 
 	err = h.validate(&request)
 	if err != nil {
-		log.Println(err)
-		meta.ResponseJSON(ctx, http.StatusBadRequest, err, nil)
-		return
+		if err.Error() != "Error: id is duplicated." {
+			log.Println(err)
+			meta.ResponseJSON(ctx, http.StatusBadRequest, err, nil)
+			return
+		}
 	}
 
 	key := getKey(nodeID)

@@ -114,7 +114,6 @@ func (c *NodeClient) Update(node *system.Node) (*system.Node, error) {
 		return nil, err
 	}
 
-	fmt.Println(string(body))
 	resp, err := c.client.R().SetHeaders(c.headers).SetBody(body).Put(c.getPath(node.ID))
 	if err != nil {
 		return nil, err
