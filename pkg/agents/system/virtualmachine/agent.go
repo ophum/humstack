@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -396,6 +397,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 	// -cpu cortex-a57
 	// -M virt
 	// -bios ./virtualmachines/{group}/{namespace}/{uuid}/QEMU_EFI.fd
+	// -serial telnet:{port},server,nowait
 	// QEMU_EFI.fdは/usr/share/qemu-efi-aarch64.QEMU_EFI.fdからコピーする
 	if vm.Group == "group1" && vm.Namespace == "test" {
 		log.Printf("\n\n=====\n%v\n", vm)
@@ -403,14 +405,22 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 	if arch, ok := vm.Annotations["virtualmachinev0/arch"]; ok && arch == "aarch64" {
 		command = "qemu-system-aarch64"
 		args[12] = "cortex-a57"
-		args = args[1 : len(args)-1]
+		args = args[1 : len(args)-2]
 		args = append(args,
-			"virtio-vga",
 			"-M",
 			"virt",
 			"-bios",
 			fmt.Sprintf("./virtualmachines/%s/%s/%s/QEMU_EFI.fd", vm.Group, vm.Namespace, vm.Spec.UUID),
+			"-serial",
+			fmt.Sprintf("telnet::%d,server,nowait", 7900+displayNumber),
 		)
+
+		for i, nic := range nics {
+			if strings.HasPrefix(nic, "tap") {
+				nics[i] = strings.ReplaceAll(nic, ",vhost=on", "")
+				continue
+			}
+		}
 
 		err := func() error {
 			src, err := os.Open("/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
