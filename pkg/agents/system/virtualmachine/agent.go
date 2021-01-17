@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net"
@@ -11,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -283,7 +285,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		)
 	}
 
-	_, err = uuid.FromBytes([]byte(vm.Spec.UUID))
+	_, err = uuid.Parse(vm.Spec.UUID)
 	if err != nil {
 		id, err := uuid.NewRandom()
 		if err != nil {
@@ -389,6 +391,57 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		"VGA,id=video0,bus=pci.0",
 	}
 
+	// TODO: x86_64とaarchの起動処理を分ける
+	// とりあえず
+	// annotationsでaarch64が指定されている場合
+	// -cpu cortex-a57
+	// -M virt
+	// -bios ./virtualmachines/{group}/{namespace}/{uuid}/QEMU_EFI.fd
+	// -serial telnet:{port},server,nowait
+	// QEMU_EFI.fdは/usr/share/qemu-efi-aarch64.QEMU_EFI.fdからコピーする
+	if arch, ok := vm.Annotations["virtualmachinev0/arch"]; ok && arch == "aarch64" {
+		command = "qemu-system-aarch64"
+		args[12] = "cortex-a57"
+		args = args[1 : len(args)-2]
+		args = append(args,
+			"-M",
+			"virt",
+			"-bios",
+			fmt.Sprintf("./virtualmachines/%s/%s/%s/QEMU_EFI.fd", vm.Group, vm.Namespace, vm.Spec.UUID),
+			"-serial",
+			fmt.Sprintf("telnet::%d,server,nowait", 7900+displayNumber),
+		)
+
+		for i, nic := range nics {
+			if strings.HasPrefix(nic, "tap") {
+				nics[i] = strings.ReplaceAll(nic, ",vhost=on", "")
+				continue
+			}
+		}
+
+		err := func() error {
+			src, err := os.Open("/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
+			if err != nil {
+				return err
+			}
+			defer src.Close()
+
+			dest, err := os.Create(fmt.Sprintf("./virtualmachines/%s/%s/%s/QEMU_EFI.fd", vm.Group, vm.Namespace, vm.Spec.UUID))
+			if err != nil {
+				return err
+			}
+			defer dest.Close()
+
+			if _, err := io.Copy(dest, src); err != nil {
+				return err
+			}
+			return nil
+		}()
+		if err != nil {
+			return err
+		}
+
+	}
 	args = append(args, disks...)
 	args = append(args, nics...)
 
