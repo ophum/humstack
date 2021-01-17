@@ -399,9 +399,6 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 	// -bios ./virtualmachines/{group}/{namespace}/{uuid}/QEMU_EFI.fd
 	// -serial telnet:{port},server,nowait
 	// QEMU_EFI.fdは/usr/share/qemu-efi-aarch64.QEMU_EFI.fdからコピーする
-	if vm.Group == "group1" && vm.Namespace == "test" {
-		log.Printf("\n\n=====\n%v\n", vm)
-	}
 	if arch, ok := vm.Annotations["virtualmachinev0/arch"]; ok && arch == "aarch64" {
 		command = "qemu-system-aarch64"
 		args[12] = "cortex-a57"
