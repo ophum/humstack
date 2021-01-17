@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ophum/humstack/pkg/agents/system/blockstorage"
+	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
 	"github.com/pkg/errors"
@@ -111,7 +112,7 @@ func (a *ImageAgent) Run() {
 					}
 
 					// とりあえずPending以外になってたら何もしない
-					if imageEntity.Status.State != "" && imageEntity.Status.State != system.ImageEntityStatePending {
+					if imageEntity.Status.State != "" && imageEntity.Status.State != system.ImageEntityStatePending && imageEntity.DeleteState != meta.DeleteStateDelete {
 						continue
 					}
 
@@ -152,6 +153,30 @@ func (a *ImageAgent) Run() {
 
 // 同じノードにあるBSを元にイメージを作成する
 func (a *ImageAgent) syncLocalImageEntity(imageEntity *system.ImageEntity, bs *system.BlockStorage) error {
+
+	if imageEntity.DeleteState == meta.DeleteStateDelete {
+		if imageEntity.Status.State != system.ImageEntityStateAvailable {
+			return nil
+		}
+
+		imageEntity.Status.State = system.ImageEntityStateDeleting
+		if _, err := a.client.SystemV0().ImageEntity().Update(imageEntity); err != nil {
+			return err
+		}
+
+		path := filepath.Join(a.localImageDirectory, imageEntity.Group, imageEntity.ID)
+		if fileIsExists(path) {
+			if err := os.Remove(path); err != nil {
+				return err
+			}
+		}
+
+		if err := a.client.SystemV0().ImageEntity().Delete(imageEntity.Group, imageEntity.ID); err != nil {
+			return err
+		}
+
+		return nil
+	}
 
 	imageEntity.Status.State = system.ImageEntityStatePending
 	if _, err := a.client.SystemV0().ImageEntity().Update(imageEntity); err != nil {
@@ -233,4 +258,9 @@ func setHash(imageEntity *system.ImageEntity) error {
 	hash := md5.Sum(resourceJSON)
 	imageEntity.ResourceHash = fmt.Sprintf("%x", hash)
 	return nil
+}
+
+func fileIsExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

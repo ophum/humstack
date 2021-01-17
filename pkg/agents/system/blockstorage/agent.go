@@ -1,15 +1,18 @@
 package blockstorage
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
 	"go.uber.org/zap"
+	"golang.org/x/sync/semaphore"
 )
 
 type BlockStorageAgent struct {
@@ -17,6 +20,7 @@ type BlockStorageAgent struct {
 	config                     *BlockStorageAgentConfig
 	localBlockStorageDirectory string
 	localImageDirectory        string
+	parallelSemaphore          *semaphore.Weighted
 	logger                     *zap.Logger
 }
 
@@ -35,6 +39,7 @@ func NewBlockStorageAgent(client *client.Clients, config *BlockStorageAgentConfi
 		config:                     config,
 		localBlockStorageDirectory: config.BlockStorageDirPath,
 		localImageDirectory:        config.ImageDirPath,
+		parallelSemaphore:          semaphore.NewWeighted(config.ParallelLimit),
 		logger:                     logger,
 	}
 }
@@ -63,6 +68,8 @@ func (a *BlockStorageAgent) Run() {
 				)
 				continue
 			}
+
+			wg := sync.WaitGroup{}
 			for _, group := range grList {
 				nsList, err := a.client.CoreV0().Namespace().List(group.ID)
 				if err != nil {
@@ -102,79 +109,91 @@ func (a *BlockStorageAgent) Run() {
 					}
 
 					for _, bs := range bsList {
-						oldHash := bs.ResourceHash
-
-						// state check
-						if bs.Status.State != system.BlockStorageStateDeleting &&
-							bs.Status.State != system.BlockStorageStatePending {
-
-							isUsed := false
-							for i, usedID := range usedBSIDs {
-								if bs.ID == usedID {
-									isUsed = true
-									usedBSIDs = append(usedBSIDs[:i], usedBSIDs[i+1:]...)
-									break
-								}
-							}
-
-							if bs.Status.State != system.BlockStorageStateUsed && isUsed {
-								bs.Status.State = system.BlockStorageStateUsed
-								bs, err = a.client.SystemV0().BlockStorage().Update(bs)
-								if err != nil {
-									a.logger.Error(
-										"update blockstorage",
-										zap.String("msg", err.Error()),
-										zap.Time("time", time.Now()),
-									)
-									continue
-								}
-							} else if bs.Status.State == system.BlockStorageStateUsed && !isUsed {
-								bs.Status.State = system.BlockStorageStateActive
-								bs, err = a.client.SystemV0().BlockStorage().Update(bs)
-								if err != nil {
-									a.logger.Error(
-										"update blockstorage",
-										zap.String("msg", err.Error()),
-										zap.Time("time", time.Now()),
-									)
-									continue
-								}
-							}
+						err := a.parallelSemaphore.Acquire(context.Background(), 1)
+						if err != nil {
+							continue
 						}
+						wg.Add(1)
 
-						switch bs.Annotations[BlockStorageV0AnnotationType] {
-						case BlockStorageV0BlockStorageTypeLocal:
-							if bs.Annotations[BlockStorageV0AnnotationNodeName] != nodeName {
-								continue
+						go func(bs *system.BlockStorage) {
+							defer func() {
+								a.parallelSemaphore.Release(1)
+								wg.Done()
+							}()
+							oldHash := bs.ResourceHash
+
+							// state check
+							if bs.Status.State != system.BlockStorageStateDeleting &&
+								bs.Status.State != system.BlockStorageStatePending {
+
+								isUsed := false
+								for i, usedID := range usedBSIDs {
+									if bs.ID == usedID {
+										isUsed = true
+										usedBSIDs = append(usedBSIDs[:i], usedBSIDs[i+1:]...)
+										break
+									}
+								}
+
+								if bs.Status.State != system.BlockStorageStateUsed && isUsed {
+									bs.Status.State = system.BlockStorageStateUsed
+									_, err := a.client.SystemV0().BlockStorage().Update(bs)
+									if err != nil {
+										a.logger.Error(
+											"update blockstorage",
+											zap.String("msg", err.Error()),
+											zap.Time("time", time.Now()),
+										)
+										return
+									}
+								} else if bs.Status.State == system.BlockStorageStateUsed && !isUsed {
+									bs.Status.State = system.BlockStorageStateActive
+									bs, err = a.client.SystemV0().BlockStorage().Update(bs)
+									if err != nil {
+										a.logger.Error(
+											"update blockstorage",
+											zap.String("msg", err.Error()),
+											zap.Time("time", time.Now()),
+										)
+										return
+									}
+								}
 							}
 
-							err = a.syncLocalBlockStorage(bs)
+							switch bs.Annotations[BlockStorageV0AnnotationType] {
+							case BlockStorageV0BlockStorageTypeLocal:
+								if bs.Annotations[BlockStorageV0AnnotationNodeName] != nodeName {
+									return
+								}
+
+								err = a.syncLocalBlockStorage(bs)
+								if err != nil {
+									a.logger.Error(
+										"sync local blockstorage",
+										zap.String("msg", err.Error()),
+										zap.Time("time", time.Now()),
+									)
+									return
+								}
+							}
+
+							if bs.ResourceHash == oldHash {
+								return
+							}
+
+							_, err := a.client.SystemV0().BlockStorage().Update(bs)
 							if err != nil {
 								a.logger.Error(
-									"sync local blockstorage",
+									"update blockstorage",
 									zap.String("msg", err.Error()),
 									zap.Time("time", time.Now()),
 								)
-								continue
 							}
-						}
-
-						if bs.ResourceHash == oldHash {
-							continue
-						}
-
-						_, err := a.client.SystemV0().BlockStorage().Update(bs)
-						if err != nil {
-							a.logger.Error(
-								"update blockstorage",
-								zap.String("msg", err.Error()),
-								zap.Time("time", time.Now()),
-							)
-							continue
-						}
+						}(bs)
 					}
 				}
 			}
+			wg.Wait()
 		}
 	}
 }
