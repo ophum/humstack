@@ -79,9 +79,11 @@ func (a *NodeAgent) Run() {
 				)
 			} else {
 				if node.Status.RequestedVcpus != res[ResourceTypeRequestVcpus] ||
-					node.Status.RequestedMemory != res[ResourceTypeRequestMemory] {
+					node.Status.RequestedMemory != res[ResourceTypeRequestMemory] ||
+					node.Status.RequestedDisk != res[ResourceTypeRequestDisk] {
 					node.Status.RequestedVcpus = res[ResourceTypeRequestVcpus]
 					node.Status.RequestedMemory = res[ResourceTypeRequestMemory]
+					node.Status.RequestedDisk = res[ResourceTypeRequestDisk]
 
 					node, err = a.client.SystemV0().Node().Update(node)
 					if err != nil {
@@ -111,8 +113,10 @@ type ResourceType string
 const (
 	ResourceTypeRequestVcpus  ResourceType = "requestVcpus"
 	ResourceTypeRequestMemory ResourceType = "requestMemory"
+	ResourceTypeRequestDisk   ResourceType = "requestDisk"
 	ResourceTypeLimitVcpus    ResourceType = "limitVcpus"
 	ResourceTypeLimitMemory   ResourceType = "limitMemory"
+	ResourceTypeLimitDisk     ResourceType = "limitDisk"
 )
 
 func (a *NodeAgent) getUsedResources() (map[ResourceType]string, error) {
@@ -122,10 +126,12 @@ func (a *NodeAgent) getUsedResources() (map[ResourceType]string, error) {
 		return nil, err
 	}
 
-	var vcpusRequests int64 = 0
-	var vcpusLimits int64 = 0
+	var vcpusRequests float64 = 0
+	var vcpusLimits float64 = 0
 	var memoryRequests int64 = 0
 	var memoryLimits int64 = 0
+	var diskRequests int64 = 0
+	var diskLimits int64 = 0
 
 	for _, group := range grList {
 		nsList, err := a.client.CoreV0().Namespace().List(group.ID)
@@ -147,13 +153,13 @@ func (a *NodeAgent) getUsedResources() (map[ResourceType]string, error) {
 					continue
 				}
 
-				vcpusRequest, err := strconv.ParseInt(withUnitToWithoutUnit(vm.Spec.RequestVcpus), 10, 64)
+				vcpusRequest, err := strconv.ParseFloat(withUnitToWithoutUnit(vm.Spec.RequestVcpus), 64)
 				if err != nil {
 					return nil, err
 				}
 				vcpusRequests += vcpusRequest
 
-				vcpusLimit, err := strconv.ParseInt(withUnitToWithoutUnit(vm.Spec.LimitVcpus), 10, 64)
+				vcpusLimit, err := strconv.ParseFloat(withUnitToWithoutUnit(vm.Spec.LimitVcpus), 64)
 				if err != nil {
 					return nil, err
 				}
@@ -171,19 +177,45 @@ func (a *NodeAgent) getUsedResources() (map[ResourceType]string, error) {
 				}
 				memoryLimits += memoryLimit
 			}
+
+			bsList, err := a.client.SystemV0().BlockStorage().List(group.ID, ns.ID)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, bs := range bsList {
+				if bs.Annotations["blockstoragev0/node_name"] != a.NodeInfo.ID ||
+					bs.Annotations["blockstoragev0/type"] != "Local" {
+					continue
+				}
+
+				diskRequest, err := strconv.ParseInt(withUnitToWithoutUnit(bs.Spec.RequestSize), 10, 64)
+				if err != nil {
+					return nil, err
+				}
+				diskRequests += diskRequest
+
+				diskLimit, err := strconv.ParseInt(withUnitToWithoutUnit(bs.Spec.LimitSize), 10, 64)
+				if err != nil {
+					return nil, err
+				}
+				diskLimits += diskLimit
+			}
 		}
 	}
 
 	return map[ResourceType]string{
 		ResourceTypeRequestVcpus:  parseVcpus(vcpusRequests),
 		ResourceTypeRequestMemory: parseMemory(memoryRequests),
+		ResourceTypeRequestDisk:   parseMemory(diskRequests),
 		ResourceTypeLimitVcpus:    parseVcpus(vcpusLimits),
 		ResourceTypeLimitMemory:   parseMemory(memoryLimits),
+		ResourceTypeLimitDisk:     parseMemory(diskLimits),
 	}, nil
 }
 
-func parseVcpus(n int64) string {
-	return fmt.Sprintf("%dm", n*1000)
+func parseVcpus(n float64) string {
+	return fmt.Sprintf("%dm", int64(n*1000))
 }
 
 func parseMemory(b int64) string {
@@ -225,7 +257,7 @@ func withUnitToWithoutUnit(numberWithUnit string) string {
 	case UnitKilobyte:
 		return fmt.Sprintf("%d", number*1024)
 	case UnitMilli:
-		return fmt.Sprintf("%d", number/1000)
+		return fmt.Sprintf("%f", float64(number)/1000)
 	}
 	return "0"
 }
