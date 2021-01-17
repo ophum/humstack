@@ -83,7 +83,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	nodeAgent := node.NewNodeAgent(system.Node{
+	nodeAgent := node.NewNodeAgent(&system.Node{
 		Meta: meta.Meta{
 			ID:   hostname,
 			Name: hostname,
