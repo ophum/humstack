@@ -285,7 +285,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 		)
 	}
 
-	_, err = uuid.FromBytes([]byte(vm.Spec.UUID))
+	_, err = uuid.Parse(vm.Spec.UUID)
 	if err != nil {
 		id, err := uuid.NewRandom()
 		if err != nil {
