@@ -15,4 +15,5 @@ type BlockStorageAgentConfig struct {
 	BlockStorageDirPath string                              `yaml:"blockStorageDirPath"`
 	ImageDirPath        string                              `yaml:"imageDirPath"`
 	CephBackend         *BlockStorageAgentCephBackendConfig `yaml:"cephBackend"`
+	ParallelLimit       int64                               `yaml:"parallelLimit"`
 }

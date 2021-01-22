@@ -46,6 +46,13 @@ func (a *ImageAgent) DownloadAPI(config *ImageAgentDownloadAPIConfig) error {
 		}
 		defer file.Close()
 
+		if finfo, err := file.Stat(); err != nil {
+			ctx.String(http.StatusInternalServerError, "%v", err)
+			return
+		} else {
+			ctx.Header("Content-Length", fmt.Sprintf("%d", finfo.Size()))
+		}
+
 		_, err = io.Copy(ctx.Writer, file)
 		if err != nil {
 			a.logger.Error(

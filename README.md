@@ -60,6 +60,8 @@ blockStorageAgentConfig:
   blockStorageDirPath: ./blockstorages
   # imageが保存される場所
   imageDirPath: ./images
+  # 処理の並行数
+  parallelLimit: 1
   # DL用のListenアドレスとポート
   downloadAPI:
     # ダウンロード時のプロキシ先に指定される

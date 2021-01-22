@@ -14,6 +14,7 @@ import (
 	"github.com/ceph/go-ceph/rbd"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
+	"github.com/pkg/errors"
 )
 
 func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error {
@@ -126,7 +127,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			if err := a.setStateError(bs); err != nil {
 				return err
 			}
-			return err
+			return errors.Wrap(err, "new ceph conn")
 		}
 		defer conn.Shutdown()
 
@@ -136,7 +137,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			if err := a.setStateError(bs); err != nil {
 				return err
 			}
-			return err
+			return errors.Wrap(err, "open io context")
 		}
 		defer ioctx.Destroy()
 
@@ -389,11 +390,11 @@ func (a BlockStorageAgent) newCephConn() (*rados.Conn, error) {
 	}
 
 	if err := cephConn.ReadConfigFile(a.config.CephBackend.ConfigPath); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "read config file")
 	}
 
 	if err := cephConn.Connect(); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "connect")
 	}
 	return cephConn, nil
 }

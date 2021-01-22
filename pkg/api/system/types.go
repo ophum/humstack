@@ -212,6 +212,7 @@ type NodeStatus struct {
 	State           NodeState `json:"state" yaml:"state"`
 	RequestedVcpus  string    `json:"requestedVcpus" yaml:"requestedVcpus"`
 	RequestedMemory string    `json:"requestedMemory" yaml:"requestedMemory"`
+	RequestedDisk   string    `json:"requestedDisk" yaml:"requestedDisk"`
 }
 
 type Node struct {
