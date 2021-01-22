@@ -24,51 +24,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 
 	// 削除処理
 	if bs.DeleteState == meta.DeleteStateDelete {
-		if bs.Status.State != "" &&
-			bs.Status.State != system.BlockStorageStateError &&
-			bs.Status.State != system.BlockStorageStateActive {
-			return nil
-		}
-
-		bs.Status.State = system.BlockStorageStateDeleting
-		_, err := a.client.SystemV0().BlockStorage().Update(bs)
-		if err != nil {
-			return err
-		}
-
-		// ceph からイメージを消す
-		conn, err := a.newCephConn()
-		if err != nil {
-			if err := a.setStateError(bs); err != nil {
-				return err
-			}
-			return err
-		}
-		defer conn.Shutdown()
-
-		ioctx, err := conn.OpenIOContext(a.config.CephBackend.PoolName)
-		if err != nil {
-			if err := a.setStateError(bs); err != nil {
-				return err
-			}
-			return err
-		}
-		defer ioctx.Destroy()
-
-		// TODO: imageがすでに消えている場合の処理
-		if err := rbd.RemoveImage(ioctx, imageNameWithGroupAndNS); err != nil {
-			if err := a.setStateError(bs); err != nil {
-				return err
-			}
-			return err
-		}
-
-		err = a.client.SystemV0().BlockStorage().Delete(bs.Group, bs.Namespace, bs.ID)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return a.deleteCephBlockStorage(bs)
 	}
 
 	// イメージが存在するならsukip
@@ -348,6 +304,55 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 		}
 	}
 	return setHash(bs)
+}
+
+func (a *BlockStorageAgent) deleteCephBlockStorage(bs *system.BlockStorage) error {
+	imageNameWithGroupAndNS := filepath.Join(bs.Group, bs.Namespace, bs.ID)
+	if bs.Status.State != "" &&
+		bs.Status.State != system.BlockStorageStateError &&
+		bs.Status.State != system.BlockStorageStateActive {
+		return nil
+	}
+
+	bs.Status.State = system.BlockStorageStateDeleting
+	_, err := a.client.SystemV0().BlockStorage().Update(bs)
+	if err != nil {
+		return err
+	}
+
+	// ceph からイメージを消す
+	conn, err := a.newCephConn()
+	if err != nil {
+		if err := a.setStateError(bs); err != nil {
+			return err
+		}
+		return err
+	}
+	defer conn.Shutdown()
+
+	ioctx, err := conn.OpenIOContext(a.config.CephBackend.PoolName)
+	if err != nil {
+		if err := a.setStateError(bs); err != nil {
+			return err
+		}
+		return err
+	}
+	defer ioctx.Destroy()
+
+	if a.cephImageIsExists(bs) {
+		if err := rbd.RemoveImage(ioctx, imageNameWithGroupAndNS); err != nil {
+			if err := a.setStateError(bs); err != nil {
+				return err
+			}
+			return err
+		}
+	}
+
+	err = a.client.SystemV0().BlockStorage().Delete(bs.Group, bs.Namespace, bs.ID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (a BlockStorageAgent) cephImageIsExists(bs *system.BlockStorage) bool {
