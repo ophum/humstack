@@ -17,10 +17,20 @@ import (
 	"github.com/pkg/errors"
 )
 
+func getImageNameWithGroupAndNS(bs *system.BlockStorage) string {
+	return filepath.Join(bs.Group, bs.Namespace, bs.ID)
+}
+
 func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error {
 	// ex. rbd:pool-name/image-name
 	path := filepath.Join(fmt.Sprintf("rbd:%s", a.config.CephBackend.PoolName), bs.ID)
-	imageNameWithGroupAndNS := filepath.Join(bs.Group, bs.Namespace, bs.ID)
+	imageNameWithGroupAndNS := getImageNameWithGroupAndNS(bs)
+
+	// コピー中・ダウンロード中の場合はskip
+	switch bs.Status.State {
+	case system.BlockStorageStateCopying, system.BlockStorageStateDownloading:
+		return nil
+	}
 
 	// 削除処理
 	if bs.DeleteState == meta.DeleteStateDelete {
@@ -29,19 +39,49 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 
 	// イメージが存在するならsukip
 	if a.cephImageIsExists(bs) {
-		if bs.Status.State == "" ||
-			bs.Status.State == system.BlockStorageStatePending ||
-			bs.Status.State == system.BlockStorageStateError {
-			bs.Status.State = system.BlockStorageStateActive
-		}
+		switch bs.Status.State {
+		case system.BlockStorageStateError:
+			// Stateがエラーなら存在するイメージは消す
+			err := func() error {
+				conn, err := a.newCephConn()
+				if err != nil {
 
-		return setHash(bs)
+					return err
+				}
+				defer conn.Shutdown()
+
+				ioctx, err := conn.OpenIOContext(a.config.CephBackend.PoolName)
+				if err != nil {
+					return err
+				}
+				defer ioctx.Destroy()
+
+				return rbd.RemoveImage(ioctx, imageNameWithGroupAndNS)
+			}()
+			if err != nil {
+				if err := a.setStateError(bs); err != nil {
+					return err
+				}
+				return err
+			}
+		case "", system.BlockStorageStatePending:
+			// 良くなさそう
+			bs.Status.State = system.BlockStorageStateActive
+			return setHash(bs)
+		case system.BlockStorageStateActive, system.BlockStorageStateUsed:
+			// イメージが存在しActive, Usedなので処理は不要
+			return nil
+		}
 	}
-	// コピー中・ダウンロード中の場合はskip
-	switch bs.Status.State {
-	case system.BlockStorageStateCopying:
-	case system.BlockStorageStateDownloading:
-		return nil
+
+	if bs.Annotations == nil {
+		bs.Annotations = map[string]string{}
+	}
+
+	bs.Annotations["ceph-pool-name"] = a.config.CephBackend.PoolName
+	bs.Annotations["ceph-image-name"] = imageNameWithGroupAndNS
+	if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+		return err
 	}
 
 	switch bs.Spec.From.Type {
@@ -142,6 +182,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			}
 			return err
 		}
+
 	case system.BlockStorageFromTypeBaseImage:
 		// TODO: From BaseImage
 
@@ -286,13 +327,6 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 		}
 	}
 
-	if bs.Annotations == nil {
-		bs.Annotations = map[string]string{}
-	}
-
-	bs.Annotations["ceph-pool-name"] = a.config.CephBackend.PoolName
-	bs.Annotations["ceph-image-name"] = imageNameWithGroupAndNS
-
 	if bs.Status.State == "" ||
 		bs.Status.State == system.BlockStorageStatePending ||
 		bs.Status.State == system.BlockStorageStateCopying ||
@@ -361,11 +395,7 @@ func (a BlockStorageAgent) cephImageIsExists(bs *system.BlockStorage) bool {
 		return false
 	}
 
-	imageName, ok := bs.Annotations["ceph-image-name"]
-	// ceph-image-nameが設定されていない
-	if !ok {
-		return false
-	}
+	imageName := getImageNameWithGroupAndNS(bs)
 
 	conn, err := a.newCephConn()
 	if err != nil {

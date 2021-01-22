@@ -110,6 +110,21 @@ func (a *BlockStorageAgent) Run() {
 					}
 
 					for _, bs := range bsList {
+						if bs.Status.State == system.BlockStorageStateQueued {
+							continue
+						}
+
+						if bs.Status.State == "" {
+							bs.Status.State = system.BlockStorageStateQueued
+							if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+								a.logger.Error(
+									"update blockstorage state",
+									zap.String("msg", err.Error()),
+									zap.Time("time", time.Now()),
+								)
+								continue
+							}
+						}
 						err := a.parallelSemaphore.Acquire(context.Background(), 1)
 						if err != nil {
 							continue
@@ -210,7 +225,6 @@ func (a *BlockStorageAgent) Run() {
 					}
 				}
 			}
-			wg.Wait()
 		}
 	}
 }

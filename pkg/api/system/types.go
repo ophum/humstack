@@ -115,6 +115,7 @@ type BlockStorageSpec struct {
 type BlockStorageState string
 
 const (
+	BlockStorageStateQueued      BlockStorageState = "Queued"
 	BlockStorageStateActive      BlockStorageState = "Active"
 	BlockStorageStateUsed        BlockStorageState = "Used"
 	BlockStorageStatePending     BlockStorageState = "Pending"
