@@ -344,6 +344,7 @@ func (a *BlockStorageAgent) deleteCephBlockStorage(bs *system.BlockStorage) erro
 	imageNameWithGroupAndNS := filepath.Join(bs.Group, bs.Namespace, bs.ID)
 	if bs.Status.State != "" &&
 		bs.Status.State != system.BlockStorageStateError &&
+		bs.Status.State != system.BlockStorageStateQueued &&
 		bs.Status.State != system.BlockStorageStateActive {
 		return nil
 	}

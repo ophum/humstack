@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
 	"go.uber.org/zap"
@@ -110,7 +111,7 @@ func (a *BlockStorageAgent) Run() {
 					}
 
 					for _, bs := range bsList {
-						if bs.Status.State == system.BlockStorageStateQueued {
+						if bs.DeleteState != meta.DeleteStateDelete && bs.Status.State == system.BlockStorageStateQueued {
 							continue
 						}
 
