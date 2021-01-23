@@ -19,6 +19,12 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 	dirPath := filepath.Join(a.localBlockStorageDirectory, bs.Group, bs.Namespace)
 	path := filepath.Join(dirPath, bs.ID)
 
+	// コピー中・ダウンロード中の場合はskip
+	switch bs.Status.State {
+	case system.BlockStorageStateCopying, system.BlockStorageStateDownloading:
+		return nil
+	}
+
 	// 削除処理
 	if bs.DeleteState == meta.DeleteStateDelete {
 		if bs.Status.State != "" &&
@@ -48,18 +54,18 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 	}
 
 	if fileIsExists(path) {
-		if bs.Status.State == "" || bs.Status.State == system.BlockStorageStatePending {
+		switch bs.Status.State {
+		case system.BlockStorageStateError:
+			// Stateがエラーなら存在するイメージを消す
+			if err := os.Remove(path); err != nil {
+				return err
+			}
+		case "", system.BlockStorageStatePending:
 			bs.Status.State = system.BlockStorageStateActive
+			return setHash(bs)
+		case system.BlockStorageStateActive, system.BlockStorageStateUsed:
+			return nil
 		}
-
-		return setHash(bs)
-	}
-
-	// コピー中・ダウンロード中の場合はskip
-	switch bs.Status.State {
-	case system.BlockStorageStateCopying:
-	case system.BlockStorageStateDownloading:
-		return nil
 	}
 
 	if !fileIsExists(dirPath) {
