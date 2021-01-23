@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
 	"go.uber.org/zap"
@@ -31,6 +32,7 @@ const (
 
 const (
 	BlockStorageV0BlockStorageTypeLocal = "Local"
+	BlockStorageV0BlockStorageTypeCeph  = "Ceph"
 )
 
 func NewBlockStorageAgent(client *client.Clients, config *BlockStorageAgentConfig, logger *zap.Logger) *BlockStorageAgent {
@@ -109,6 +111,21 @@ func (a *BlockStorageAgent) Run() {
 					}
 
 					for _, bs := range bsList {
+						if bs.DeleteState != meta.DeleteStateDelete && bs.Status.State == system.BlockStorageStateQueued {
+							continue
+						}
+
+						if bs.Status.State == "" {
+							bs.Status.State = system.BlockStorageStateQueued
+							if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+								a.logger.Error(
+									"update blockstorage state",
+									zap.String("msg", err.Error()),
+									zap.Time("time", time.Now()),
+								)
+								continue
+							}
+						}
 						err := a.parallelSemaphore.Acquire(context.Background(), 1)
 						if err != nil {
 							continue
@@ -175,6 +192,21 @@ func (a *BlockStorageAgent) Run() {
 									)
 									return
 								}
+
+							case BlockStorageV0BlockStorageTypeCeph:
+								if bs.Annotations[BlockStorageV0AnnotationNodeName] != nodeName {
+									return
+								}
+
+								err = a.syncCephBlockStorage(bs)
+								if err != nil {
+									a.logger.Error(
+										"sync local blockstorage",
+										zap.String("msg", err.Error()),
+										zap.Time("time", time.Now()),
+									)
+									return
+								}
 							}
 
 							if bs.ResourceHash == oldHash {
@@ -188,12 +220,12 @@ func (a *BlockStorageAgent) Run() {
 									zap.String("msg", err.Error()),
 									zap.Time("time", time.Now()),
 								)
+								return
 							}
 						}(bs)
 					}
 				}
 			}
-			wg.Wait()
 		}
 	}
 }
