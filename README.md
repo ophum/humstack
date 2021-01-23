@@ -8,7 +8,7 @@ humstack is iaas. influenced by n0stack, kubernetes...
 
 ```
 sudo apt update
-sudo apt install qemu qemu-kvm cloud-image-utils
+sudo apt install qemu qemu-kvm cloud-image-utils librbd-dev librados-dev qemu-system-arm qemu-efi-aarch64
 echo 1 > /proc/sys/ipv4/ip_forward
 ```
 
@@ -68,6 +68,9 @@ blockStorageAgentConfig:
     advertiseAddress: 192.168.10.1
     listenAddress: 0.0.0.0
     listenPort: 8082
+  cephBackend:
+    configPath: /etc/ceph/ceph.conf
+    poolName: test-pool
 
 # networkAgentの設定
 networkAgentConfig:
@@ -88,6 +91,10 @@ imageAgentConfig:
   blockStorageDirPath: ./blockstorages
   # imageを保存する場所
   imageDirPath: ./images
+  cephBackend:
+    configPath: /etc/ceph/ceph.conf
+    # blockstorageが保存されているceph pool
+    poolName: test-pool
 
 
 ```

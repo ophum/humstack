@@ -29,3 +29,6 @@ imageAgentConfig:
   downloadAPI:
     advertiseAddress: 192.168.10.3
     listenPort: 8083
+  cephBackend:
+    configPath: /etc/ceph/ceph.conf
+    poolName: test-pool

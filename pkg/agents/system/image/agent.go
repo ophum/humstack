@@ -208,13 +208,13 @@ func (a *ImageAgent) syncLocalImageEntity(imageEntity *system.ImageEntity, bs *s
 
 		conn, err := a.newCephConn()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "new ceph conn")
 		}
 		defer conn.Shutdown()
 
 		ioctx, err := conn.OpenIOContext(a.config.CephBackend.PoolName)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "open io context")
 		}
 		defer ioctx.Destroy()
 
