@@ -1,0 +1,30 @@
+name: goreleaser
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  release:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Apt update
+        run: sudo apt update
+      - name: Install library
+        run: sudo apt install -y librbd-dev librados-dev
+      - uses: actions/checkout@v2
+        with:
+          # コミットログからリリースノートを作るならこのオプションが必要
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: latest
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

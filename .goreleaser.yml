@@ -1,0 +1,58 @@
+# This is an example .goreleaser.yml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+before:
+  hooks:
+    ## You may remove this if you don't use go modules.
+    #- go mod download
+    ## you may remove this if you don't need go generate
+    #- go generate ./...
+builds:
+  - id: apiserver
+    main: ./cmd/apiserver/main.go
+    binary: apiserver
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+    goarch:
+      - amd64
+  - id: agent
+    main: ./cmd/agent/main.go
+    binary: agent
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+    goarch:
+      - amd64
+  - id: humcli
+    main: ./cmd/humcli/main.go
+    binary: humcli
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+    goarch:
+      - amd64
+archives:
+  - id: apiserver
+    builds:
+    - apiserver
+    format: tar.gz
+    name_template: "apiserver_v{{.Version}}_linux_amd64"
+    files:
+    - none*
+  - id: agent
+    builds:
+    - agent
+    format: tar.gz
+    name_template: "agent_v{{.Version}}_linux_amd64"
+    files:
+    - none*
+  - id: humcli
+    builds:
+    - humcli
+    format: tar.gz
+    name_template: "humcli_v{{.Version}}_linux_amd64"
+    files:
+    - none*
