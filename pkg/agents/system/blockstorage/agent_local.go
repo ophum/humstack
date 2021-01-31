@@ -29,7 +29,8 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 	if bs.DeleteState == meta.DeleteStateDelete {
 		if bs.Status.State != "" &&
 			bs.Status.State != system.BlockStorageStateError &&
-			bs.Status.State != system.BlockStorageStateActive {
+			bs.Status.State != system.BlockStorageStateActive &&
+			bs.Status.State != system.BlockStorageStateQueued {
 			return nil
 		}
 		bs.Status.State = system.BlockStorageStateDeleting
@@ -118,7 +119,13 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 			return err
 		}
 
-		_, err = io.Copy(file, res.Body)
+		//reader := shapeio.NewReader(res.Body)
+		//reader.SetRateLimit(1024 * 1024 * 10) // 10KB/sec
+		if res.ContentLength >= 0 {
+			_, err = io.CopyN(file, res.Body, res.ContentLength)
+		} else {
+			_, err = io.Copy(file, res.Body)
+		}
 		if err != nil {
 			bs.Status.State = system.BlockStorageStateError
 			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {

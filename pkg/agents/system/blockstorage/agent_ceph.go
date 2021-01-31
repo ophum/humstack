@@ -159,8 +159,14 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			return err
 		}
 		defer cephImage.Close()
+
 		// BaseImageのデータをcephのimageに書き込む
-		if _, err := io.Copy(cephImage, res.Body); err != nil {
+		if res.ContentLength >= 0 {
+			_, err = io.CopyN(cephImage, res.Body, res.ContentLength)
+		} else {
+			_, err = io.Copy(cephImage, res.Body)
+		}
+		if err != nil {
 			if err := a.setStateError(bs); err != nil {
 				return err
 			}

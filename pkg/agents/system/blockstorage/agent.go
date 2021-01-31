@@ -57,6 +57,50 @@ func (a *BlockStorageAgent) Run() {
 			zap.String("msg", err.Error()),
 			zap.Time("time", time.Now()))
 	}
+	// init
+	grList, err := a.client.CoreV0().Group().List()
+	if err != nil {
+		a.logger.Error(
+			"get group list",
+			zap.String("msg", err.Error()),
+			zap.Time("time", time.Now()),
+		)
+	}
+	for _, group := range grList {
+		nsList, err := a.client.CoreV0().Namespace().List(group.ID)
+		if err != nil {
+			a.logger.Error(
+				"get namespace list",
+				zap.String("msg", err.Error()),
+				zap.Time("time", time.Now()),
+			)
+			continue
+		}
+		for _, ns := range nsList {
+			bsList, err := a.client.SystemV0().BlockStorage().List(group.ID, ns.ID)
+			if err != nil {
+				a.logger.Error(
+					"get blockstorage list",
+					zap.String("msg", err.Error()),
+					zap.Time("time", time.Now()),
+				)
+				continue
+			}
+			for _, bs := range bsList {
+				switch bs.Status.State {
+				case system.BlockStorageStateCopying, system.BlockStorageStateDownloading, system.BlockStorageStateDeleting, system.BlockStorageStateQueued:
+					bs.Status.State = ""
+					if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+						a.logger.Panic(
+							"init state Copying or Downloading or Deleting or Queued => ``",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()))
+
+					}
+				}
+			}
+		}
+	}
 
 	for {
 		select {
@@ -126,13 +170,13 @@ func (a *BlockStorageAgent) Run() {
 								continue
 							}
 						}
-						err := a.parallelSemaphore.Acquire(context.Background(), 1)
+						err := a.parallelSemaphore.Acquire(context.TODO(), 1)
 						if err != nil {
 							continue
 						}
 						wg.Add(1)
-
-						go func(bs *system.BlockStorage) {
+						copiedBS := *bs
+						go func(usedBSIDs []string, bs *system.BlockStorage) {
 							defer func() {
 								a.parallelSemaphore.Release(1)
 								wg.Done()
@@ -222,10 +266,11 @@ func (a *BlockStorageAgent) Run() {
 								)
 								return
 							}
-						}(bs)
+						}(usedBSIDs, &copiedBS)
 					}
 				}
 			}
+			wg.Wait()
 		}
 	}
 }
