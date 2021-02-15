@@ -22,6 +22,7 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 	// コピー中・ダウンロード中の場合はskip
 	switch bs.Status.State {
 	case system.BlockStorageStateCopying, system.BlockStorageStateDownloading:
+		log.Println("skip copying or downloading")
 		return nil
 	}
 

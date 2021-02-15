@@ -320,13 +320,6 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			}
 			return err
 		}
-		// BaseImageのデータをcephのimageに書き込む
-		if _, err := io.Copy(cephImage, src); err != nil {
-			if err := a.setStateError(bs); err != nil {
-				return err
-			}
-			return err
-		}
 
 		// リサイズ
 		imageNameFull := filepath.Join(a.config.CephBackend.PoolName, imageNameWithGroupAndNS)

@@ -159,21 +159,27 @@ func (a *BlockStorageAgent) Run() {
 							continue
 						}
 
-						if bs.Status.State == "" {
-							bs.Status.State = system.BlockStorageStateQueued
-							if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
-								a.logger.Error(
-									"update blockstorage state",
-									zap.String("msg", err.Error()),
-									zap.Time("time", time.Now()),
-								)
-								continue
-							}
-						}
 						err := a.parallelSemaphore.Acquire(context.TODO(), 1)
 						if err != nil {
+							a.logger.Error(
+								"acqure semaphre",
+								zap.String("msg", err.Error()),
+								zap.Time("time", time.Now()),
+							)
 							continue
 						}
+
+						//if bs.Status.State == "" {
+						//	bs.Status.State = system.BlockStorageStateQueued
+						//	if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+						//		a.logger.Error(
+						//			"update blockstorage state",
+						//			zap.String("msg", err.Error()),
+						//			zap.Time("time", time.Now()),
+						//		)
+						//		continue
+						//	}
+						//}
 						wg.Add(1)
 						copiedBS := *bs
 						go func(usedBSIDs []string, bs *system.BlockStorage) {
@@ -185,7 +191,8 @@ func (a *BlockStorageAgent) Run() {
 
 							// state check
 							if bs.Status.State != system.BlockStorageStateDeleting &&
-								bs.Status.State != system.BlockStorageStatePending {
+								bs.Status.State != system.BlockStorageStatePending &&
+								bs.Status.State != system.BlockStorageStateQueued {
 
 								isUsed := false
 								for i, usedID := range usedBSIDs {
