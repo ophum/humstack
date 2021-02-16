@@ -70,6 +70,20 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			return setHash(bs)
 		case system.BlockStorageStateActive, system.BlockStorageStateUsed:
 			// イメージが存在しActive, Usedなので処理は不要
+			if bs.Annotations == nil {
+				bs.Annotations = map[string]string{}
+			}
+
+			_, poolOk := bs.Annotations["ceph-pool-name"]
+			_, imageOk := bs.Annotations["ceph-image-name"]
+
+			if !poolOk || !imageOk {
+				bs.Annotations["ceph-pool-name"] = a.config.CephBackend.PoolName
+				bs.Annotations["ceph-image-name"] = imageNameWithGroupAndNS
+				if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+					return err
+				}
+			}
 			return nil
 		}
 	}
