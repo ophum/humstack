@@ -309,7 +309,12 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 		}
 
 		// BaseImageのデータをcephのimageに書き込む
-		if _, err := io.Copy(cephImage, src); err != nil {
+		if finfo, err := src.Stat(); err == nil {
+			_, err = io.CopyN(cephImage, src, finfo.Size())
+		} else {
+			_, err = io.Copy(cephImage, src)
+		}
+		if err != nil {
 			if err := a.setStateError(bs); err != nil {
 				return err
 			}
