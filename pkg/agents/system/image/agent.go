@@ -87,6 +87,11 @@ func (a *ImageAgent) Run() {
 
 				for _, imageEntity := range imageEntityList {
 					oldHash := imageEntity.ResourceHash
+
+					if imageEntity.Status.State == system.ImageEntityStateAvailable {
+						continue
+					}
+
 					bs, err := a.client.SystemV0().BlockStorage().Get(
 						imageEntity.Group,
 						imageEntity.Spec.Source.Namespace,
