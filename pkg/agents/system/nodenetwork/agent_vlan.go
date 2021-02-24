@@ -17,6 +17,9 @@ func (a *NodeNetworkAgent) syncVLANNetwork(network *system.NodeNetwork) error {
 
 	bridgeName := utils.GenerateName("hum-br-", network.Group+network.Namespace+network.ID)
 	vlanName := a.config.VLAN.DevName + "." + network.Spec.ID
+	if a.config.VLAN.VLANInterfaceNamePrefix != "" {
+		vlanName = a.config.VLAN.VLANInterfaceNamePrefix + "." + network.Spec.ID
+	}
 
 	// vlan idがすでに別のbridgeに接続されているかチェックする
 	vlanLink, err := netlink.LinkByName(vlanName)

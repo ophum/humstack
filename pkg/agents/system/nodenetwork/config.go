@@ -6,7 +6,8 @@ type NetworkAgentConfigVXLAN struct {
 }
 
 type NetworkAgentConfigVLAN struct {
-	DevName string `yaml:"devName"`
+	DevName                 string `yaml:"devName"`
+	VLANInterfaceNamePrefix string `yaml:"vlanInterfaceNamePrefix"`
 }
 
 type NetworkAgentConfig struct {
