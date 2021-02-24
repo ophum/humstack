@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
+	"strconv"
 
 	"github.com/ceph/go-ceph/rados"
 	"github.com/ceph/go-ceph/rbd"
@@ -350,7 +352,7 @@ func (a *ImageAgent) syncCephImageEntity(imageEntity *system.ImageEntity, bs *sy
 		return err
 	}
 
-	size := int64(0)
+	var image *rbd.Image
 	if t, ok := bs.Annotations["blockstoragev0/type"]; ok && t == "Ceph" {
 		imageName, ok := bs.Annotations["ceph-image-name"]
 		if !ok {
@@ -369,38 +371,8 @@ func (a *ImageAgent) syncCephImageEntity(imageEntity *system.ImageEntity, bs *sy
 		}
 		defer ioctx.Destroy()
 
-		if image, err := rbd.OpenImageReadOnly(ioctx, imageName, ""); err != nil {
+		if image, err = rbd.OpenImageReadOnly(ioctx, imageName, ""); err != nil {
 			return errors.Wrapf(err, "open rbd image `%s`", imageName)
-		} else {
-			defer image.Close()
-
-			limitSize, err := image.GetSize()
-			if err != nil {
-				return err
-			}
-
-			sum := uint64(0)
-			if err := image.DiffIterate(rbd.DiffIterateConfig{
-				Offset: 0,
-				Length: limitSize,
-				Callback: func(o, l uint64, e int, x interface{}) int {
-					sum += l
-					return 0
-				},
-			}); err != nil {
-				return errors.Wrap(err, "calc rbd size")
-			}
-			size = int64(sum)
-
-			snapshot, err := image.CreateSnapshot(imageEntity.ID)
-			if err != nil {
-				return errors.Wrap(err, "Failed to create ceph snapshot from ceph image.")
-			}
-
-			err = snapshot.Protect()
-			if err != nil {
-				return errors.Wrap(err, "Failed to protect ceph snapshot.")
-			}
 		}
 
 	} else {
@@ -410,40 +382,71 @@ func (a *ImageAgent) syncCephImageEntity(imageEntity *system.ImageEntity, bs *sy
 			return err
 		}
 		defer s.Close()
-		var src io.Reader = s
+
+		var size uint64
 		if finfo, err := s.Stat(); err != nil {
 			return err
 		} else {
-			size = finfo.Size()
+			size = uint64(finfo.Size())
 		}
 
-		destPath := filepath.Join(a.localImageDirectory, imageEntity.Group, imageEntity.ID)
-		destDirPath := filepath.Dir(destPath)
-
-		if err := os.MkdirAll(destDirPath, 0755); err != nil {
-			return err
+		conn, err := a.newCephConn()
+		if err != nil {
+			return errors.Wrap(err, "new ceph conn")
 		}
 
-		dest, err := os.Create(destPath)
+		defer conn.Shutdown()
+		ioctx, err := conn.OpenIOContext(a.config.CephBackend.PoolName)
+		if err != nil {
+			return errors.Wrap(err, "open io context")
+		}
+		defer ioctx.Destroy()
+
+		imageName := "ceph-tmp-" + bs.Group + bs.Namespace + bs.ID
+
+		cephImage, err := rbd.Create(ioctx, imageName, size, 22)
 		if err != nil {
 			return err
 		}
-		defer dest.Close()
 
-		if _, err := io.CopyN(dest, src, size); err != nil {
-			return errors.Wrapf(err, "copy image from source bs")
+		if err := cephImage.Open(); err != nil {
+			return err
 		}
+		defer cephImage.Close()
 
-		hasher := sha256.New()
-		if _, err := dest.Seek(0, 0); err != nil {
-			return errors.Wrap(err, "seek dest file cursor")
+		// 一時Imageのデータをcephのimageに書き込む
+		if finfo, err := s.Stat(); err == nil {
+			_, err = io.CopyN(cephImage, s, finfo.Size())
+		} else {
+			_, err = io.Copy(cephImage, s)
 		}
-
-		if _, err := io.Copy(hasher, dest); err != nil {
+		if err != nil {
 			return err
 		}
 
-		imageEntity.Spec.Hash = fmt.Sprintf("sha256:%x", hasher.Sum(nil))
+		// リサイズ
+		imageNameFull := filepath.Join(a.config.CephBackend.PoolName, imageName)
+		command := "qemu-img"
+		args := []string{
+			"resize",
+			fmt.Sprintf("rbd:%s", imageNameFull),
+			withUnitToWithoutUnit(bs.Spec.LimitSize),
+		}
+		cmd := exec.Command(command, args...)
+		if _, err := cmd.CombinedOutput(); err != nil {
+			return err
+		}
+
+	}
+
+	snapshot, err := image.CreateSnapshot(imageEntity.ID)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create ceph snapshot from ceph image.")
+	}
+
+	err = snapshot.Protect()
+	if err != nil {
+		return errors.Wrap(err, "Failed to protect ceph snapshot.")
 	}
 
 	if imageEntity.Annotations == nil {
@@ -495,4 +498,31 @@ func (a ImageAgent) newCephConn() (*rados.Conn, error) {
 func fileIsExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+const (
+	UnitGigabyte = 'G'
+	UnitMegabyte = 'M'
+	UnitKilobyte = 'K'
+)
+
+func withUnitToWithoutUnit(numberWithUnit string) string {
+	length := len(numberWithUnit)
+	if numberWithUnit[length-1] >= '0' && numberWithUnit[length-1] <= '9' {
+		return numberWithUnit
+	}
+
+	number, err := strconv.ParseInt(numberWithUnit[:length-1], 10, 64)
+	if err != nil {
+		return "0"
+	}
+	switch numberWithUnit[length-1] {
+	case UnitGigabyte:
+		return fmt.Sprintf("%d", number*1024*1024*1024)
+	case UnitMegabyte:
+		return fmt.Sprintf("%d", number*1024*1024)
+	case UnitKilobyte:
+		return fmt.Sprintf("%d", number*1024)
+	}
+	return "0"
 }
