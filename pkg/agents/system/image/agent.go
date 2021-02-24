@@ -37,6 +37,7 @@ const (
 
 const (
 	ImageEntityV0ImageEntityTypeLocal = "Local"
+	ImageEntityV0ImageEntityTypeCeph  = "Ceph"
 )
 
 func NewImageAgent(client *client.Clients, config *ImageAgentConfig, logger *zap.Logger) *ImageAgent {
@@ -127,12 +128,29 @@ func (a *ImageAgent) Run() {
 
 					entityType, ok := imageEntity.Annotations[ImageEntityV0AnnotationType]
 					if !ok {
+						// save local as default place
 						entityType = ImageEntityV0ImageEntityTypeLocal
+						if imageEntity.Spec.Type == "Ceph" {
+							entityType = ImageEntityV0ImageEntityTypeCeph
+						} else if imageEntity.Spec.Type == "Local" {
+							entityType = ImageEntityV0ImageEntityTypeLocal
+						} else {
+							errors.Errorf("Image type value is invalid: ", imageEntity.Spec.Type)
+						}
 					}
 
 					switch entityType {
 					case ImageEntityV0ImageEntityTypeLocal:
 						if err := a.syncLocalImageEntity(imageEntity, bs); err != nil {
+							a.logger.Error(
+								"sync local imageentity",
+								zap.String("msg", err.Error()),
+								zap.Time("time", time.Now()),
+							)
+							continue
+						}
+					case ImageEntityV0ImageEntityTypeCeph:
+						if err := a.syncCephImageEntity(imageEntity, bs); err != nil {
 							a.logger.Error(
 								"sync local imageentity",
 								zap.String("msg", err.Error()),

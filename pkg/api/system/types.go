@@ -47,6 +47,7 @@ type ImageEntitySource struct {
 type ImageEntitySpec struct {
 	Hash   string            `json:"hash" yaml:"hash"`
 	Source ImageEntitySource `json:"source" yaml:"source"`
+	Type   string            `json:"type" yaml:"type"`
 }
 
 type ImageEntityState string
