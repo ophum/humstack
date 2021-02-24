@@ -33,6 +33,8 @@ type ImageAgent struct {
 
 const (
 	ImageEntityV0AnnotationType = "imageentityv0/type"
+	ImageEntityV0AnnotationCephSnapName = "imageentityv0/ceph-snapname"
+	ImageEntityV0AnnotationCephImageName = "imageentityv0/ceph-imagename"
 )
 
 const (
@@ -421,6 +423,7 @@ func (a *ImageAgent) syncCephImageEntity(imageEntity *system.ImageEntity, bs *sy
 		defer ioctx.Destroy()
 
 		imageName := "ceph-tmp-" + bs.Group + bs.Namespace + bs.ID
+		imageEntity.Annotations[ImageEntityV0AnnotationCephImageName] = imageName
 
 		cephImage, err := rbd.Create(ioctx, imageName, size, 22)
 		if err != nil {
@@ -457,7 +460,9 @@ func (a *ImageAgent) syncCephImageEntity(imageEntity *system.ImageEntity, bs *sy
 
 	}
 
-	snapshot, err := image.CreateSnapshot(imageEntity.ID)
+	snapName := imageEntity.ID
+	snapshot, err := image.CreateSnapshot(snapName)
+	imageEntity.Annotations[ImageEntityV0AnnotationCephSnapName]  = snapName
 	if err != nil {
 		return errors.Wrap(err, "Failed to create ceph snapshot from ceph image.")
 	}

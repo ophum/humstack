@@ -248,9 +248,8 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 		defer ioctx.Destroy()
 
 
-		if imageEntity.Spec.Type == "Local" {
-			// imageEntityがlocalにある場合
-			// TODO: imageEntityがCephにある場合
+		// imageEntityがlocalにある場合
+		if image.Spec.Type == "Local" {
 			srcDirPath := filepath.Join(a.localImageDirectory, bs.Group)
 			if !fileIsExists(srcDirPath) {
 				if err := os.MkdirAll(srcDirPath, 0755); err != nil {
@@ -354,8 +353,13 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 				return err
 			}
 		} else if imageEntity.Spec.Type == "Ceph" {
-			// ここにどうにかしてスナップショット名を持ってくる
-			rbd.CloneFromImage(parentImagename, snapshotName, ioctx, imageNameWithGroupAndNS, rbd.NewRbdImageOptions())
+			snapName := image.Annotations["imageentityv0/ceph-snapname"]
+			imageName := image.Annotations["imageentityv0/ceph-imagename"]
+			cephImage, err := rbd.OpenImageReadOnly(ioctx, imageName, rbd.NoSnapshot)
+			if err != nil {
+				return err
+			}
+			rbd.CloneFromImage(cephImage, snapName, ioctx, imageNameWithGroupAndNS, rbd.NewRbdImageOptions())
 		}
 	}
 
