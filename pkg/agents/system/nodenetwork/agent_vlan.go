@@ -7,6 +7,7 @@ import (
 
 	"github.com/n0stack/n0stack/n0core/pkg/driver/iproute2"
 	"github.com/ophum/humstack/pkg/agents/system/nodenetwork/utils"
+	"github.com/ophum/humstack/pkg/agents/system/nodenetwork/vlan"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/pkg/errors"
@@ -61,12 +62,12 @@ func (a *NodeNetworkAgent) syncVLANNetwork(network *system.NodeNetwork) error {
 	if err != nil {
 		return err
 	}
-	dev, err := iproute2.GetInterface(a.config.VLAN.DevName)
+	dev, err := netlink.LinkByName(a.config.VLAN.DevName)
 	if err != nil {
 		return err
 	}
 
-	vlan, err := iproute2.NewVlan(dev, int(id))
+	vlan, err := vlan.NewVlan(dev, vlanName, int(id))
 	if err != nil {
 		return err
 	}
