@@ -352,7 +352,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 				}
 				return err
 			}
-		} else if imageEntity.Spec.Type == "Ceph" {
+		} else if image.Spec.Type == "Ceph" {
 			snapName := image.Annotations["imageentityv0/ceph-snapname"]
 			imageName := image.Annotations["imageentityv0/ceph-imagename"]
 			cephImage, err := rbd.OpenImageReadOnly(ioctx, imageName, rbd.NoSnapshot)

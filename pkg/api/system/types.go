@@ -71,6 +71,7 @@ type ImageEntity struct {
 
 type ImageSpec struct {
 	EntityMap map[string]string `json:"entityMap" yaml:"entityMap"`
+	Type   string            `json:"type" yaml:"type"`
 }
 
 type Image struct {
