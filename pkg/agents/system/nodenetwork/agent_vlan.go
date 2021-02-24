@@ -72,7 +72,7 @@ func (a *NodeNetworkAgent) syncVLANNetwork(network *system.NodeNetwork) error {
 		return err
 	}
 
-	br, err := iproute2.NewBridge(bridgeName)
+	br, err := netlink.LinkByName(bridgeName)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (a *NodeNetworkAgent) syncVLANNetwork(network *system.NodeNetwork) error {
 			return errors.Wrap(err, "delete vlan")
 		}
 
-		if err := br.Delete(); err != nil {
+		if err := netlink.LinkDel(br); err != nil {
 			return errors.Wrap(err, "delete bridge")
 		}
 		if err := a.client.SystemV0().NodeNetwork().Delete(network.Group, network.Namespace, network.ID); err != nil {
