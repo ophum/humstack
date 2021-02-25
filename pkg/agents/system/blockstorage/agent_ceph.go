@@ -228,58 +228,6 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			return fmt.Errorf("Image Entity not found")
 		}
 
-		// imageEntityがlocalにある場合
-		// TODO: imageEntityがCephにある場合
-		srcDirPath := filepath.Join(a.localImageDirectory, bs.Group)
-		if !fileIsExists(srcDirPath) {
-			if err := os.MkdirAll(srcDirPath, 0755); err != nil {
-				bs.Status.State = system.BlockStorageStateError
-				if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
-					return err
-				}
-				return err
-			}
-		}
-		srcPath := filepath.Join(srcDirPath, imageEntity)
-
-		// localになかったら別のノードから持ってくる
-		// TODO: agent_localでも使っているので関数にする
-		if !fileIsExists(srcPath) {
-			err := func() error {
-				src, err := os.Create(srcPath)
-				if err != nil {
-					return err
-				}
-				defer src.Close()
-
-				stream, err := a.client.SystemV0().Image().Download(bs.Group, bs.Spec.From.BaseImage.ImageName, bs.Spec.From.BaseImage.Tag)
-				if err != nil {
-					return err
-				}
-				defer stream.Close()
-
-				if _, err := io.Copy(src, stream); err != nil {
-					return err
-				}
-				return nil
-			}()
-			if err != nil {
-				if err := a.setStateError(bs); err != nil {
-					return err
-				}
-				return err
-			}
-		}
-
-		src, err := os.Open(srcPath)
-		if err != nil {
-			if err := a.setStateError(bs); err != nil {
-				return err
-			}
-			return err
-		}
-		defer src.Close()
-
 		// cephのpoolにイメージを作る
 		conn, err := a.newCephConn()
 		if err != nil {
@@ -299,56 +247,119 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 		}
 		defer ioctx.Destroy()
 
-		size, err := strconv.ParseUint(withUnitToWithoutUnit(bs.Spec.LimitSize), 10, 64)
-		if err != nil {
-			if err := a.setStateError(bs); err != nil {
-				return err
-			}
-			return err
-		}
-		cephImage, err := rbd.Create(ioctx, imageNameWithGroupAndNS, size, 22)
-		if err != nil {
-			if err := a.setStateError(bs); err != nil {
-				return err
-			}
-			return err
-		}
-		defer cephImage.Close()
 
-		if err := cephImage.Open(); err != nil {
-			if err := a.setStateError(bs); err != nil {
-				return err
+		// imageEntityがlocalにある場合
+		if image.Spec.Type == "Local" {
+			srcDirPath := filepath.Join(a.localImageDirectory, bs.Group)
+			if !fileIsExists(srcDirPath) {
+				if err := os.MkdirAll(srcDirPath, 0755); err != nil {
+					bs.Status.State = system.BlockStorageStateError
+					if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+						return err
+					}
+					return err
+				}
 			}
-			return err
-		}
+			srcPath := filepath.Join(srcDirPath, imageEntity)
 
-		// BaseImageのデータをcephのimageに書き込む
-		if finfo, err := src.Stat(); err == nil {
-			_, err = io.CopyN(cephImage, src, finfo.Size())
-		} else {
-			_, err = io.Copy(cephImage, src)
-		}
-		if err != nil {
-			if err := a.setStateError(bs); err != nil {
-				return err
-			}
-			return err
-		}
+			// localになかったら別のノードから持ってくる
+			// TODO: agent_localでも使っているので関数にする
+			if !fileIsExists(srcPath) {
+				err := func() error {
+					src, err := os.Create(srcPath)
+					if err != nil {
+						return err
+					}
+					defer src.Close()
 
-		// リサイズ
-		imageNameFull := filepath.Join(a.config.CephBackend.PoolName, imageNameWithGroupAndNS)
-		command := "qemu-img"
-		args := []string{
-			"resize",
-			fmt.Sprintf("rbd:%s", imageNameFull),
-			withUnitToWithoutUnit(bs.Spec.LimitSize),
-		}
-		cmd := exec.Command(command, args...)
-		if _, err := cmd.CombinedOutput(); err != nil {
-			if err := a.setStateError(bs); err != nil {
+					stream, err := a.client.SystemV0().Image().Download(bs.Group, bs.Spec.From.BaseImage.ImageName, bs.Spec.From.BaseImage.Tag)
+					if err != nil {
+						return err
+					}
+					defer stream.Close()
+
+					if _, err := io.Copy(src, stream); err != nil {
+						return err
+					}
+					return nil
+				}()
+				if err != nil {
+					if err := a.setStateError(bs); err != nil {
+						return err
+					}
+					return err
+				}
+			}
+
+			src, err := os.Open(srcPath)
+			if err != nil {
+				if err := a.setStateError(bs); err != nil {
+					return err
+				}
 				return err
 			}
-			return err
+			defer src.Close()
+
+			size, err := strconv.ParseUint(withUnitToWithoutUnit(bs.Spec.LimitSize), 10, 64)
+			if err != nil {
+				if err := a.setStateError(bs); err != nil {
+					return err
+				}
+				return err
+			}
+
+			cephImage, err := rbd.Create(ioctx, imageNameWithGroupAndNS, size, 22)
+			if err != nil {
+				if err := a.setStateError(bs); err != nil {
+					return err
+				}
+				return err
+			}
+			defer cephImage.Close()
+
+			if err := cephImage.Open(); err != nil {
+				if err := a.setStateError(bs); err != nil {
+					return err
+				}
+				return err
+			}
+
+			// BaseImageのデータをcephのimageに書き込む
+			if finfo, err := src.Stat(); err == nil {
+				_, err = io.CopyN(cephImage, src, finfo.Size())
+			} else {
+				_, err = io.Copy(cephImage, src)
+			}
+			if err != nil {
+				if err := a.setStateError(bs); err != nil {
+					return err
+				}
+				return err
+			}
+
+			// リサイズ
+			imageNameFull := filepath.Join(a.config.CephBackend.PoolName, imageNameWithGroupAndNS)
+			command := "qemu-img"
+			args := []string{
+				"resize",
+				fmt.Sprintf("rbd:%s", imageNameFull),
+				withUnitToWithoutUnit(bs.Spec.LimitSize),
+			}
+			cmd := exec.Command(command, args...)
+			if _, err := cmd.CombinedOutput(); err != nil {
+				if err := a.setStateError(bs); err != nil {
+					return err
+				}
+				return err
+			}
+		} else if image.Spec.Type == "Ceph" {
+			snapName := image.Annotations["imageentityv0/ceph-snapname"]
+			imageName := image.Annotations["imageentityv0/ceph-imagename"]
+			cephImage, err := rbd.OpenImageReadOnly(ioctx, imageName, rbd.NoSnapshot)
+			if err != nil {
+				return err
+			}
+			rbd.CloneFromImage(cephImage, snapName, ioctx, imageNameWithGroupAndNS, rbd.NewRbdImageOptions())
 		}
 	}
 
