@@ -40,10 +40,22 @@ type NodeNetwork struct {
 	Status NodeNetworkStatus `json:"status" yaml:"status"`
 }
 
+type ImageEntitySourceType string
+
+const (
+	ImageEntitySourceTypeBlockStorage ImageEntitySourceType = "BlockStorage"
+	ImageEntitySourceTypeImage        ImageEntitySourceType = "Image"
+)
+
 type ImageEntitySource struct {
-	Namespace      string `json:"namespace" yaml:"namespace"`
-	BlockStorageID string `json:"blockStorageID" yaml:"blockStorageID"`
+	Type           ImageEntitySourceType `json:"type" yaml:"type"`
+	Namespace      string                `json:"namespace" yaml:"namespace"`
+	BlockStorageID string                `json:"blockStorageID" yaml:"blockStorageID"`
+
+	ImageName string `json:"imageName" yaml:"imageName"`
+	ImageTag  string `json:"imageTag" yaml:"imageTag"`
 }
+
 type ImageEntitySpec struct {
 	Hash   string            `json:"hash" yaml:"hash"`
 	Source ImageEntitySource `json:"source" yaml:"source"`
@@ -71,7 +83,7 @@ type ImageEntity struct {
 
 type ImageSpec struct {
 	EntityMap map[string]string `json:"entityMap" yaml:"entityMap"`
-	Type   string            `json:"type" yaml:"type"`
+	Type      string            `json:"type" yaml:"type"`
 }
 
 type Image struct {

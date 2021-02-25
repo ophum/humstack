@@ -18,7 +18,6 @@ spec:
     namespace: bar
     blockStorageID: team01_bar_bs
 status:
-  state: Available
 ---
 meta:
   apiType: systemv0/image

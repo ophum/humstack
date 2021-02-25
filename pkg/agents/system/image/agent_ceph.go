@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (a *ImageAgent) syncCephImageEntity(imageEntity *system.ImageEntity, bs *system.BlockStorage) error {
+func (a *ImageAgent) syncCephImageEntityFromBlockStorage(imageEntity *system.ImageEntity, bs *system.BlockStorage) error {
 
 	if imageEntity.DeleteState == meta.DeleteStateDelete {
 		if imageEntity.Status.State != system.ImageEntityStateAvailable {

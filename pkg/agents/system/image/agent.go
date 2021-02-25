@@ -93,35 +93,9 @@ func (a *ImageAgent) Run() {
 						continue
 					}
 
-					bs, err := a.client.SystemV0().BlockStorage().Get(
-						imageEntity.Group,
-						imageEntity.Spec.Source.Namespace,
-						imageEntity.Spec.Source.BlockStorageID)
-
-					if err != nil {
-						a.logger.Error(
-							"get blockstorage list",
-							zap.String("msg", err.Error()),
-							zap.Time("time", time.Now()),
-						)
-						continue
-					}
-
-					nodeName := bs.Annotations[blockstorage.BlockStorageV0AnnotationNodeName]
-
-					// 別のノードのBSの場合は何もしない
-					if nodeName != a.nodeName {
-						continue
-					}
-
-					// ファイルがなければPENDINGとして扱う
-					if _, err := os.Stat(filepath.Join(a.localImageDirectory, imageEntity.Group, imageEntity.ID)); err != nil {
-						imageEntity.Status.State = system.ImageEntityStatePending
-					}
-
-					// とりあえずPending以外になってたら何もしない
-					if imageEntity.Status.State != "" && imageEntity.Status.State != system.ImageEntityStatePending && imageEntity.DeleteState != meta.DeleteStateDelete {
-						continue
+					sourceType := imageEntity.Spec.Source.Type
+					if sourceType == "" {
+						sourceType = system.ImageEntitySourceTypeBlockStorage
 					}
 
 					entityType, ok := imageEntity.Annotations[ImageEntityV0AnnotationType]
@@ -136,26 +110,59 @@ func (a *ImageAgent) Run() {
 							errors.Errorf("Image type value is invalid: ", imageEntity.Spec.Type)
 						}
 					}
+					switch sourceType {
+					case system.ImageEntitySourceTypeBlockStorage:
+						bs, err := a.client.SystemV0().BlockStorage().Get(
+							imageEntity.Group,
+							imageEntity.Spec.Source.Namespace,
+							imageEntity.Spec.Source.BlockStorageID)
 
-					switch entityType {
-					case ImageEntityV0ImageEntityTypeLocal:
-						if err := a.syncLocalImageEntity(imageEntity, bs); err != nil {
+						if err != nil {
 							a.logger.Error(
-								"sync local imageentity",
+								"get blockstorage list",
 								zap.String("msg", err.Error()),
 								zap.Time("time", time.Now()),
 							)
 							continue
 						}
-					case ImageEntityV0ImageEntityTypeCeph:
-						if err := a.syncCephImageEntity(imageEntity, bs); err != nil {
-							a.logger.Error(
-								"sync local imageentity",
-								zap.String("msg", err.Error()),
-								zap.Time("time", time.Now()),
-							)
+
+						nodeName := bs.Annotations[blockstorage.BlockStorageV0AnnotationNodeName]
+
+						// 別のノードのBSの場合は何もしない
+						if nodeName != a.nodeName {
 							continue
 						}
+
+						// ファイルがなければPENDINGとして扱う
+						if _, err := os.Stat(filepath.Join(a.localImageDirectory, imageEntity.Group, imageEntity.ID)); err != nil {
+							imageEntity.Status.State = system.ImageEntityStatePending
+						}
+
+						// とりあえずPending以外になってたら何もしない
+						if imageEntity.Status.State != "" && imageEntity.Status.State != system.ImageEntityStatePending && imageEntity.DeleteState != meta.DeleteStateDelete {
+							continue
+						}
+						switch entityType {
+						case ImageEntityV0ImageEntityTypeLocal:
+							if err := a.syncLocalImageEntityFromBlockStorage(imageEntity, bs); err != nil {
+								a.logger.Error(
+									"sync local imageentity",
+									zap.String("msg", err.Error()),
+									zap.Time("time", time.Now()),
+								)
+								continue
+							}
+						case ImageEntityV0ImageEntityTypeCeph:
+							if err := a.syncCephImageEntityFromBlockStorage(imageEntity, bs); err != nil {
+								a.logger.Error(
+									"sync local imageentity",
+									zap.String("msg", err.Error()),
+									zap.Time("time", time.Now()),
+								)
+								continue
+							}
+						}
+					case system.ImageEntitySourceTypeImage:
 					}
 
 					if imageEntity.ResourceHash == oldHash {
