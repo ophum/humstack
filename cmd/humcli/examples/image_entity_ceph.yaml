@@ -1,0 +1,31 @@
+---
+meta:
+  apiType: corev0/group
+  id: group1
+  name: group1
+---
+meta:
+  apiType: systemv0/imageentity
+  id: hoge
+  name: hoge
+  group: group1
+  annotations:
+    imageentityv0/ceph-snapname: hoge
+    imageentityv0/ceph-imagename: ceph-tmp-group1barteam01_bar_bs
+spec:
+  type: Ceph
+  source:
+    namespace: bar
+    blockStorageID: team01_bar_bs
+status:
+  state: Available
+---
+meta:
+  apiType: systemv0/image
+  id: ceph_image
+  name: ceph_image
+  group: group1
+spec:
+  entityMap:
+    latest: hoge
+---
