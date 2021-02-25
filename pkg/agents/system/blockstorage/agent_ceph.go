@@ -67,6 +67,9 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 		case "", system.BlockStorageStatePending:
 			// 良くなさそう
 			bs.Status.State = system.BlockStorageStateActive
+			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
+				return err
+			}
 			return setHash(bs)
 		case system.BlockStorageStateActive, system.BlockStorageStateUsed:
 			// イメージが存在しActive, Usedなので処理は不要
@@ -219,7 +222,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			return err
 		}
 
-		imageEntity, ok := image.Spec.EntityMap[bs.Spec.From.BaseImage.Tag]
+		imageEntityID, ok := image.Spec.EntityMap[bs.Spec.From.BaseImage.Tag]
 		if !ok {
 			bs.Status.State = system.BlockStorageStateError
 			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
@@ -227,6 +230,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			}
 			return fmt.Errorf("Image Entity not found")
 		}
+		imageEntity, err := a.client.SystemV0().ImageEntity().Get(bs.Group, imageEntityID)
 
 		// cephのpoolにイメージを作る
 		conn, err := a.newCephConn()
@@ -247,9 +251,8 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 		}
 		defer ioctx.Destroy()
 
-
 		// imageEntityがlocalにある場合
-		if image.Spec.Type == "Local" {
+		if imageEntity.Spec.Type == "Local" || imageEntity.Spec.Type == "" {
 			srcDirPath := filepath.Join(a.localImageDirectory, bs.Group)
 			if !fileIsExists(srcDirPath) {
 				if err := os.MkdirAll(srcDirPath, 0755); err != nil {
@@ -260,7 +263,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 					return err
 				}
 			}
-			srcPath := filepath.Join(srcDirPath, imageEntity)
+			srcPath := filepath.Join(srcDirPath, imageEntity.ID)
 
 			// localになかったら別のノードから持ってくる
 			// TODO: agent_localでも使っているので関数にする
@@ -352,13 +355,14 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 				}
 				return err
 			}
-		} else if image.Spec.Type == "Ceph" {
-			snapName := image.Annotations["imageentityv0/ceph-snapname"]
-			imageName := image.Annotations["imageentityv0/ceph-imagename"]
+		} else if imageEntity.Spec.Type == "Ceph" {
+			snapName := imageEntity.Annotations["imageentityv0/ceph-snapname"]
+			imageName := imageEntity.Annotations["imageentityv0/ceph-imagename"]
 			cephImage, err := rbd.OpenImageReadOnly(ioctx, imageName, rbd.NoSnapshot)
 			if err != nil {
 				return err
 			}
+			defer cephImage.Close()
 			rbd.CloneFromImage(cephImage, snapName, ioctx, imageNameWithGroupAndNS, rbd.NewRbdImageOptions())
 		}
 	}

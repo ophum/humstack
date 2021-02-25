@@ -9,8 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"time"
 	"strconv"
+	"time"
 
 	"github.com/ceph/go-ceph/rados"
 	"github.com/ceph/go-ceph/rbd"
@@ -32,8 +32,8 @@ type ImageAgent struct {
 }
 
 const (
-	ImageEntityV0AnnotationType = "imageentityv0/type"
-	ImageEntityV0AnnotationCephSnapName = "imageentityv0/ceph-snapname"
+	ImageEntityV0AnnotationType          = "imageentityv0/type"
+	ImageEntityV0AnnotationCephSnapName  = "imageentityv0/ceph-snapname"
 	ImageEntityV0AnnotationCephImageName = "imageentityv0/ceph-imagename"
 )
 
@@ -462,7 +462,7 @@ func (a *ImageAgent) syncCephImageEntity(imageEntity *system.ImageEntity, bs *sy
 
 	snapName := imageEntity.ID
 	snapshot, err := image.CreateSnapshot(snapName)
-	imageEntity.Annotations[ImageEntityV0AnnotationCephSnapName]  = snapName
+	imageEntity.Annotations[ImageEntityV0AnnotationCephSnapName] = snapName
 	if err != nil {
 		return errors.Wrap(err, "Failed to create ceph snapshot from ceph image.")
 	}

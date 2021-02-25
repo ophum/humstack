@@ -1,0 +1,40 @@
+meta:
+  apiType: systemv0/blockstorage
+  id: bs1
+  name: blockstorage1-ceph
+  group: group1
+  namespace: bar
+  annotations:
+    blockstoragev0/node_name: developvbox
+    blockstoragev0/type: Ceph
+spec:
+  requestSize: 1G
+  limitSize: 10G
+  from:
+    type: BaseImage
+    baseImage:
+      imageName: ceph_image
+      tag: latest
+    http:
+      url: http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img
+---
+meta:
+  apiType: systemv0/virtualmachine
+  id: vm1
+  name: virtualmachine1
+  group: group1
+  namespace: bar
+  annotations:
+    virtualmachinev0/node_name: developvbox
+spec:
+  requestVcpus: 1000m
+  limitVcpus: 1000m
+  requestMemory: 1G
+  limitMemory: 1G
+  blockStorageIDs:
+    - bs1
+  actionState: PowerOn
+  loginUsers:
+    - username: test
+      sshAuthorizedKeys:
+        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCsf7CDppU1lSzUbsmszAXX/rAXdGxB71i93IsZtV4omO/uRz/z6dLIsBidf9vIqcEfCFTFR00ULC+GKULTNz2LOaGnGsDS28Bi5u+cx90+BCAzEg6cBwPIYmdZgASsjMmRvI/r+xR/gNxq2RCR8Gl8y5voAWoU8aezRUxf1Ra3KljMd1dbIFGJxgzNiwqN3yL0tr9zActw/Q7yBWKWi1c5sW2QZLAnSj/WWTSGGm0Ad88Aq22DakwN6itUkS6XNhr4YKehLVm90fIojrCrtZmClULAlnUk5lbdzou4jiETsZz3zk/q76ZQ3ugk+G00kcx9v6ElLkAFv2ZZqzWbMvUz6J0k2SzkAIbcBDz+aq2sXeY04FaIOFPiH41+DTQXCtOskWkaJBMKLTE/Z83nSyQGr9If2F/PbnuxGkwiZzeZaLWxqI2SebhLR5jPETgfhB1y83RP6u8Jq5+9BUURFqpb8mfG/riTnAj0ZR4Li23+/hWhc8We+fVB1BxdbWyRn/M=
