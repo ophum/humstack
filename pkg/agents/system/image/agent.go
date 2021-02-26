@@ -89,7 +89,7 @@ func (a *ImageAgent) Run() {
 				for _, imageEntity := range imageEntityList {
 					oldHash := imageEntity.ResourceHash
 
-					if imageEntity.Status.State == system.ImageEntityStateAvailable {
+					if imageEntity.DeleteState != meta.DeleteStateDelete && imageEntity.Status.State == system.ImageEntityStateAvailable {
 						continue
 					}
 
