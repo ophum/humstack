@@ -179,7 +179,11 @@ func (a *ImageAgent) Run() {
 						}
 						switch entityType {
 						case ImageEntityV0ImageEntityTypeLocal:
-
+							a.logger.Warn(
+								"sync local imageentity from imageEntity not implements",
+								zap.Time("time", time.Now()),
+							)
+							continue
 						case ImageEntityV0ImageEntityTypeCeph:
 							if err := a.syncCephImageEntityFromImage(imageEntity); err != nil {
 								a.logger.Error(

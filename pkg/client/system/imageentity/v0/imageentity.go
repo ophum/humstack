@@ -3,7 +3,6 @@ package v0
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"path/filepath"
 
 	"github.com/go-resty/resty/v2"
@@ -87,7 +86,6 @@ func (c *ImageEntityClient) Create(imageEntity *system.ImageEntity) (*system.Ima
 	if err != nil {
 		return nil, err
 	}
-	log.Println(string(body))
 
 	resp, err := c.client.R().SetHeaders(c.headers).SetBody(body).Post(c.getPath(imageEntity.Group, ""))
 	if err != nil {
@@ -97,7 +95,6 @@ func (c *ImageEntityClient) Create(imageEntity *system.ImageEntity) (*system.Ima
 
 	nodeResp := ImageEntityResponse{}
 	err = json.Unmarshal(body, &nodeResp)
-	log.Println(err)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +112,6 @@ func (c *ImageEntityClient) Update(imageEntity *system.ImageEntity) (*system.Ima
 		return nil, err
 	}
 
-	fmt.Println(string(body))
 	resp, err := c.client.R().SetHeaders(c.headers).SetBody(body).Put(c.getPath(imageEntity.Group, imageEntity.ID))
 	if err != nil {
 		return nil, err
