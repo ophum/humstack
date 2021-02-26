@@ -325,6 +325,7 @@ func (a *ImageAgent) deleteCephImageEntity(imageEntity *system.ImageEntity) erro
 		}
 		defer image.Close()
 
+		// snapshotをすべて消す
 		if snaps, err := image.GetSnapshotNames(); err != nil {
 			return errors.Wrapf(err, "Failed to get snapshot names by image `%s`", imageName)
 		} else {
@@ -344,6 +345,7 @@ func (a *ImageAgent) deleteCephImageEntity(imageEntity *system.ImageEntity) erro
 			}
 		}
 
+		// イメージを削除
 		image.Close()
 		if err := image.Remove(); err != nil {
 			imageEntity.Status.State = ""
