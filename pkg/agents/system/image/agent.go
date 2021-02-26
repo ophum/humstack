@@ -93,6 +93,10 @@ func (a *ImageAgent) Run() {
 						continue
 					}
 
+					if imageEntity.Annotations == nil {
+						imageEntity.Annotations = map[string]string{}
+					}
+
 					sourceType := imageEntity.Spec.Source.Type
 					if sourceType == "" {
 						sourceType = system.ImageEntitySourceTypeBlockStorage
@@ -127,15 +131,25 @@ func (a *ImageAgent) Run() {
 						}
 
 						nodeName := bs.Annotations[blockstorage.BlockStorageV0AnnotationNodeName]
+						if imageEntity.DeleteState == meta.DeleteStateDelete {
+							nodeName = imageEntity.Annotations["imageentityv0/node_name"]
+						}
 
 						// 別のノードのBSの場合は何もしない
 						if nodeName != a.nodeName {
 							continue
 						}
 
+						imageEntity.Annotations["imageentityv0/node_name"] = nodeName
+						if _, err := a.client.SystemV0().ImageEntity().Update(imageEntity); err != nil {
+							continue
+						}
+
 						// ファイルがなければPENDINGとして扱う
-						if _, err := os.Stat(filepath.Join(a.localImageDirectory, imageEntity.Group, imageEntity.ID)); err != nil {
-							imageEntity.Status.State = system.ImageEntityStatePending
+						if imageEntity.Spec.Type == "" || imageEntity.Spec.Type == ImageEntityV0ImageEntityTypeLocal {
+							if _, err := os.Stat(filepath.Join(a.localImageDirectory, imageEntity.Group, imageEntity.ID)); err != nil {
+								imageEntity.Status.State = system.ImageEntityStatePending
+							}
 						}
 
 						// とりあえずPending以外になってたら何もしない

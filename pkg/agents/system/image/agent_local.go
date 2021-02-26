@@ -78,11 +78,31 @@ func (a *ImageAgent) syncLocalImageEntityFromBlockStorage(imageEntity *system.Im
 		}
 		defer ioctx.Destroy()
 
-		if image, err := rbd.OpenImageReadOnly(ioctx, imageName, ""); err != nil {
+		if image, err := rbd.OpenImage(ioctx, imageName, ""); err != nil {
 			return errors.Wrapf(err, "open rbd image `%s`", imageName)
 		} else {
 			defer image.Close()
 			src = image
+
+			_, lockers, err := image.ListLockers()
+			if err != nil {
+				return err
+			}
+			// lockを解除する
+			for _, locker := range lockers {
+				if err := image.BreakLock(locker.Client, locker.Cookie); err != nil {
+					return err
+				}
+			}
+
+			// 親がある場合はflatten
+			if _, err := image.GetParent(); err != nil {
+				return err
+			} else {
+				if err := image.Flatten(); err != nil {
+					return errors.Wrapf(err, "Failed to Flatten image `%s`", imageName)
+				}
+			}
 
 			limitSize, err := image.GetSize()
 			if err != nil {

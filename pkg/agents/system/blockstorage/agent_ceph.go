@@ -364,6 +364,38 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			}
 			defer cephImage.Close()
 			rbd.CloneFromImage(cephImage, snapName, ioctx, imageNameWithGroupAndNS, rbd.NewRbdImageOptions())
+			// ceph image のリサイズ
+			if image, err := rbd.OpenImage(ioctx, imageNameWithGroupAndNS, ""); err != nil {
+				return err
+			} else {
+				defer image.Close()
+				size, err := strconv.ParseUint(withUnitToWithoutUnit(bs.Spec.LimitSize), 10, 64)
+				if err != nil {
+					if err := a.setStateError(bs); err != nil {
+						return err
+					}
+					return err
+				}
+				if err := image.Resize(size); err != nil {
+					return err
+				}
+			}
+			// ceph image内のqcow2リサイズ
+			imageNameFull := filepath.Join(a.config.CephBackend.PoolName, imageNameWithGroupAndNS)
+			command := "qemu-img"
+			args := []string{
+				"resize",
+				fmt.Sprintf("rbd:%s", imageNameFull),
+				withUnitToWithoutUnit(bs.Spec.LimitSize),
+			}
+			cmd := exec.Command(command, args...)
+			if _, err := cmd.CombinedOutput(); err != nil {
+				if err := a.setStateError(bs); err != nil {
+					return err
+				}
+				return err
+			}
+
 		}
 	}
 

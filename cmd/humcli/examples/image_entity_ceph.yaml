@@ -9,12 +9,10 @@ meta:
   id: hoge
   name: hoge
   group: group1
-  annotations:
-    imageentityv0/ceph-snapname: hoge
-    imageentityv0/ceph-imagename: ceph-tmp-group1barteam01_bar_bs
 spec:
   type: Ceph
   source:
+    type: BlockStorage
     namespace: bar
     blockStorageID: team01_bar_bs
 status:
@@ -27,4 +25,6 @@ meta:
 spec:
   entityMap:
     latest: hoge
+    fromImageEntity: fromImageEntity
+    foo: foo
 ---

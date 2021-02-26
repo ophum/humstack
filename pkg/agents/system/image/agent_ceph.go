@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/ceph/go-ceph/rbd"
@@ -63,7 +62,7 @@ func (a *ImageAgent) syncCephImageEntityFromImage(imageEntity *system.ImageEntit
 		}
 		defer ioctx.Destroy()
 
-		imageName := "ceph-tmp-" + imageEntity.ID
+		imageName := getSnapParentImageName(imageEntity)
 		imageEntity.Annotations[ImageEntityV0AnnotationCephImageName] = imageName
 
 		image, err = rbd.Create(ioctx, imageName, uint64(size), 22)
@@ -128,6 +127,18 @@ func (a *ImageAgent) syncCephImageEntityFromBlockStorage(imageEntity *system.Ima
 		return err
 	}
 
+	conn, err := a.newCephConn()
+	if err != nil {
+		return errors.Wrap(err, "new ceph conn")
+	}
+	defer conn.Shutdown()
+
+	ioctx, err := conn.OpenIOContext(a.config.CephBackend.PoolName)
+	if err != nil {
+		return errors.Wrap(err, "open io context")
+	}
+	defer ioctx.Destroy()
+
 	var image *rbd.Image
 	if t, ok := bs.Annotations["blockstoragev0/type"]; ok && t == "Ceph" {
 		imageName, ok := bs.Annotations["ceph-image-name"]
@@ -135,22 +146,30 @@ func (a *ImageAgent) syncCephImageEntityFromBlockStorage(imageEntity *system.Ima
 			return fmt.Errorf("ceph-image-name not found")
 		}
 
-		conn, err := a.newCephConn()
-		if err != nil {
-			return errors.Wrap(err, "new ceph conn")
-		}
-		defer conn.Shutdown()
-
-		ioctx, err := conn.OpenIOContext(a.config.CephBackend.PoolName)
-		if err != nil {
-			return errors.Wrap(err, "open io context")
-		}
-		defer ioctx.Destroy()
-
-		if image, err = rbd.OpenImageReadOnly(ioctx, imageName, ""); err != nil {
+		if fromImage, err := rbd.OpenImageReadOnly(ioctx, imageName, ""); err != nil {
 			return errors.Wrapf(err, "open rbd image `%s`", imageName)
-		}
+		} else {
+			defer fromImage.Close()
+			size, err := fromImage.GetSize()
+			if err != nil {
+				return errors.Wrapf(err, "Failed to get image size `%s`", imageName)
+			}
 
+			destImageName := getSnapParentImageName(imageEntity)
+			image, err = rbd.Create(ioctx, destImageName, size, 22)
+			if err != nil {
+				return errors.Wrapf(err, "Failed to create image `%s`", destImageName)
+			}
+			if err := image.Open(); err != nil {
+				return errors.Wrapf(err, "Failed to open image `%s`", destImageName)
+			}
+			defer image.Close()
+
+			if err := fromImage.Copy2(image); err != nil {
+				return errors.Wrapf(err, "Failed to copy image from `%s` to `%s`.", imageName, destImageName)
+			}
+			imageEntity.Annotations[ImageEntityV0AnnotationCephImageName] = destImageName
+		}
 	} else {
 		srcPath := filepath.Join(a.localBlockStorageDirectory, bs.Group, bs.Namespace, bs.ID)
 		s, err := os.Open(srcPath)
@@ -166,54 +185,28 @@ func (a *ImageAgent) syncCephImageEntityFromBlockStorage(imageEntity *system.Ima
 			size = uint64(finfo.Size())
 		}
 
-		conn, err := a.newCephConn()
-		if err != nil {
-			return errors.Wrap(err, "new ceph conn")
-		}
-
-		defer conn.Shutdown()
-		ioctx, err := conn.OpenIOContext(a.config.CephBackend.PoolName)
-		if err != nil {
-			return errors.Wrap(err, "open io context")
-		}
-		defer ioctx.Destroy()
-
-		imageName := "ceph-tmp-" + bs.Group + bs.Namespace + bs.ID
+		imageName := getSnapParentImageName(imageEntity)
 		imageEntity.Annotations[ImageEntityV0AnnotationCephImageName] = imageName
 
-		cephImage, err := rbd.Create(ioctx, imageName, size, 22)
+		image, err = rbd.Create(ioctx, imageName, size, 22)
 		if err != nil {
 			return err
 		}
 
-		if err := cephImage.Open(); err != nil {
+		if err := image.Open(); err != nil {
 			return err
 		}
-		defer cephImage.Close()
+		defer image.Close()
 
 		// 一時Imageのデータをcephのimageに書き込む
 		if finfo, err := s.Stat(); err == nil {
-			_, err = io.CopyN(cephImage, s, finfo.Size())
+			_, err = io.CopyN(image, s, finfo.Size())
 		} else {
-			_, err = io.Copy(cephImage, s)
+			_, err = io.Copy(image, s)
 		}
 		if err != nil {
 			return err
 		}
-
-		// リサイズ
-		imageNameFull := filepath.Join(a.config.CephBackend.PoolName, imageName)
-		command := "qemu-img"
-		args := []string{
-			"resize",
-			fmt.Sprintf("rbd:%s", imageNameFull),
-			withUnitToWithoutUnit(bs.Spec.LimitSize),
-		}
-		cmd := exec.Command(command, args...)
-		if _, err := cmd.CombinedOutput(); err != nil {
-			return err
-		}
-
 	}
 
 	snapName := imageEntity.ID
@@ -228,9 +221,6 @@ func (a *ImageAgent) syncCephImageEntityFromBlockStorage(imageEntity *system.Ima
 		return errors.Wrap(err, "Failed to protect ceph snapshot.")
 	}
 
-	if imageEntity.Annotations == nil {
-		imageEntity.Annotations = map[string]string{}
-	}
 	imageEntity.Annotations["image-entity-download-host"] = fmt.Sprintf("%s:%d", a.config.DownloadAPI.AdvertiseAddress, a.config.DownloadAPI.ListenPort)
 	imageEntity.Status.State = system.ImageEntityStateAvailable
 	if _, err := a.client.SystemV0().ImageEntity().Update(imageEntity); err != nil {
@@ -364,4 +354,8 @@ func (a *ImageAgent) deleteCephImageEntity(imageEntity *system.ImageEntity) erro
 		return err
 	}
 	return nil
+}
+
+func getSnapParentImageName(imageEntity *system.ImageEntity) string {
+	return "ceph-tmp-" + imageEntity.ID
 }
