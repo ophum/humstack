@@ -163,6 +163,33 @@ func (a *ImageAgent) Run() {
 							}
 						}
 					case system.ImageEntitySourceTypeImage:
+						nodeName, ok := imageEntity.Annotations["imageentityv0/node_name"]
+						if !ok {
+							continue
+						}
+
+						// 別のノードのBSの場合は何もしない
+						if nodeName != a.nodeName {
+							continue
+						}
+
+						// とりあえずPending以外になってたら何もしない
+						if imageEntity.Status.State != "" && imageEntity.Status.State != system.ImageEntityStatePending && imageEntity.DeleteState != meta.DeleteStateDelete {
+							continue
+						}
+						switch entityType {
+						case ImageEntityV0ImageEntityTypeLocal:
+
+						case ImageEntityV0ImageEntityTypeCeph:
+							if err := a.syncCephImageEntityFromImage(imageEntity); err != nil {
+								a.logger.Error(
+									"sync ceph imageentity from imageEntity",
+									zap.String("msg", err.Error()),
+									zap.Time("time", time.Now()),
+								)
+								continue
+							}
+						}
 					}
 
 					if imageEntity.ResourceHash == oldHash {

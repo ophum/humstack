@@ -13,6 +13,111 @@ import (
 	"github.com/pkg/errors"
 )
 
+func (a *ImageAgent) getImageEntityByImage(group, id, tag string) (*system.ImageEntity, error) {
+	image, err := a.client.SystemV0().Image().Get(group, id)
+	if err != nil {
+		return nil, err
+	}
+	imageEntityID, ok := image.Spec.EntityMap[tag]
+	if !ok {
+		return nil, fmt.Errorf("image tag is not found")
+	}
+
+	return a.client.SystemV0().ImageEntity().Get(group, imageEntityID)
+}
+
+func (a *ImageAgent) syncCephImageEntityFromImage(imageEntity *system.ImageEntity) error {
+	if imageEntity.DeleteState == meta.DeleteStateDelete {
+		return fmt.Errorf("not implements")
+	}
+
+	sourceImageEntity, err := a.getImageEntityByImage(
+		imageEntity.Group,
+		imageEntity.Spec.Source.ImageName,
+		imageEntity.Spec.Source.ImageTag,
+	)
+	if err != nil {
+		return err
+	}
+
+	// コピー元がAvailableではない
+	if sourceImageEntity.Status.State != system.ImageEntityStateAvailable {
+		return nil
+	}
+
+	imageEntity.Status.State = system.ImageEntityStateCopying
+	if _, err := a.client.SystemV0().ImageEntity().Update(imageEntity); err != nil {
+		return err
+	}
+
+	var image *rbd.Image
+	if sourceImageEntity.Spec.Type == "Ceph" {
+		return fmt.Errorf("not implements")
+	} else { // Local or ""
+		stream, size, err := a.client.SystemV0().Image().Download(
+			sourceImageEntity.Group,
+			imageEntity.Spec.Source.ImageName,
+			imageEntity.Spec.Source.ImageTag,
+		)
+		if err != nil {
+			return err
+		}
+		defer stream.Close()
+
+		conn, err := a.newCephConn()
+		if err != nil {
+			return err
+		}
+		defer conn.Shutdown()
+
+		ioctx, err := conn.OpenIOContext(a.config.CephBackend.PoolName)
+		if err != nil {
+			return err
+		}
+		defer ioctx.Destroy()
+
+		imageName := "ceph-tmp-" + imageEntity.ID
+		imageEntity.Annotations[ImageEntityV0AnnotationCephImageName] = imageName
+
+		image, err = rbd.Create(ioctx, imageName, uint64(size), 22)
+		if err != nil {
+			return err
+		}
+
+		if err := image.Open(); err != nil {
+			return err
+		}
+		defer image.Close()
+
+		if _, err := io.CopyN(image, stream, int64(size)); err != nil {
+			return err
+		}
+	}
+
+	snapName := imageEntity.ID
+	snapshot, err := image.CreateSnapshot(snapName)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create ceph snapshot from ceph image.")
+	}
+
+	if imageEntity.Annotations == nil {
+		imageEntity.Annotations = map[string]string{}
+	}
+	imageEntity.Annotations[ImageEntityV0AnnotationCephSnapName] = snapName
+
+	if err := snapshot.Protect(); err != nil {
+		return errors.Wrap(err, "Failed to protect ceph snapshot.")
+	}
+
+	imageEntity.Annotations["image-entity-download-host"] = fmt.Sprintf("%s:%d", a.config.DownloadAPI.AdvertiseAddress, a.config.DownloadAPI.ListenPort)
+	imageEntity.Status.State = system.ImageEntityStateAvailable
+	if _, err := a.client.SystemV0().ImageEntity().Update(imageEntity); err != nil {
+		return err
+	}
+
+	return setHash(imageEntity)
+}
+
 func (a *ImageAgent) syncCephImageEntityFromBlockStorage(imageEntity *system.ImageEntity, bs *system.BlockStorage) error {
 
 	if imageEntity.DeleteState == meta.DeleteStateDelete {

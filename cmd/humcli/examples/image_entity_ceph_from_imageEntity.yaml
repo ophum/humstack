@@ -1,0 +1,31 @@
+---
+meta:
+  apiType: corev0/group
+  id: group1
+  name: group1
+---
+meta:
+  apiType: systemv0/imageentity
+  id: fromImageEntity
+  name: fromImageEntity
+  group: group1
+  annotations:
+    imageentityv0/node_name: developvbox
+spec:
+  type: Ceph
+  source:
+    type: Image
+    imageName: test
+    imageTag: ictsc-bar
+status:
+---
+meta:
+  apiType: systemv0/image
+  id: ceph_image
+  name: ceph_image
+  group: group1
+spec:
+  entityMap:
+    latest: hoge
+    fromImageEntity: fromImageEntity
+---
