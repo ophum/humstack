@@ -14,7 +14,7 @@ import (
 )
 
 // 同じノードにあるBSを元にイメージを作成する
-func (a *ImageAgent) syncLocalImageEntity(imageEntity *system.ImageEntity, bs *system.BlockStorage) error {
+func (a *ImageAgent) syncLocalImageEntityFromBlockStorage(imageEntity *system.ImageEntity, bs *system.BlockStorage) error {
 
 	if imageEntity.DeleteState == meta.DeleteStateDelete {
 		if imageEntity.Status.State != system.ImageEntityStateAvailable {

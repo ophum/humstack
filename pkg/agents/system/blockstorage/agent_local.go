@@ -210,7 +210,7 @@ func (a *BlockStorageAgent) syncLocalBlockStorage(bs *system.BlockStorage) error
 				}
 				defer src.Close()
 
-				stream, err := a.client.SystemV0().Image().Download(bs.Group, bs.Spec.From.BaseImage.ImageName, bs.Spec.From.BaseImage.Tag)
+				stream, _, err := a.client.SystemV0().Image().Download(bs.Group, bs.Spec.From.BaseImage.ImageName, bs.Spec.From.BaseImage.Tag)
 				if err != nil {
 					bs.Status.State = system.BlockStorageStateError
 					if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {

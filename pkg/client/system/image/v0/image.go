@@ -142,17 +142,17 @@ func (c *ImageClient) Delete(groupID, imageID string) error {
 	return nil
 }
 
-func (c *ImageClient) Download(groupID, imageID, tag string) (io.ReadCloser, error) {
+func (c *ImageClient) Download(groupID, imageID, tag string) (io.ReadCloser, int, error) {
 	resp, err := http.Get(fmt.Sprintf("%s/tags/%s/download", c.getPath(groupID, imageID), tag))
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if resp.StatusCode/100 != 2 {
-		return nil, fmt.Errorf("not found")
+		return nil, 0, fmt.Errorf("not found")
 	}
 
-	return resp.Body, nil
+	return resp.Body, int(resp.ContentLength), nil
 }
 
 func (c *ImageClient) getPath(groupID, imageID string) string {

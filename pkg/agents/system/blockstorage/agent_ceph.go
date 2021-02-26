@@ -275,7 +275,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 					}
 					defer src.Close()
 
-					stream, err := a.client.SystemV0().Image().Download(bs.Group, bs.Spec.From.BaseImage.ImageName, bs.Spec.From.BaseImage.Tag)
+					stream, _, err := a.client.SystemV0().Image().Download(bs.Group, bs.Spec.From.BaseImage.ImageName, bs.Spec.From.BaseImage.Tag)
 					if err != nil {
 						return err
 					}
