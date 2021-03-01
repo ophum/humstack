@@ -172,18 +172,22 @@ func (s *LevelDBStore) Delete(key string) {
 }
 
 func (s *LevelDBStore) Lock(key string) {
-	s.lockTableLocker.Lock()
-	defer s.lockTableLocker.Unlock()
+	s.lockTableLocker.RLock()
 	if _, ok := s.lockTable[key]; !ok {
+		s.lockTableLocker.RUnlock()
+		s.lockTableLocker.Lock()
 		s.lockTable[key] = &sync.RWMutex{}
+		s.lockTableLocker.Unlock()
 	}
 
+	s.lockTableLocker.RLock()
 	s.lockTable[key].Lock()
+	s.lockTableLocker.RUnlock()
 }
 
 func (s *LevelDBStore) Unlock(key string) {
-	s.lockTableLocker.Lock()
-	defer s.lockTableLocker.Unlock()
+	s.lockTableLocker.RLock()
+	defer s.lockTableLocker.RUnlock()
 	if _, ok := s.lockTable[key]; ok {
 		s.lockTable[key].Unlock()
 	}
