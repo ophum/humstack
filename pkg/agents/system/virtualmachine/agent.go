@@ -90,6 +90,16 @@ func (a *VirtualMachineAgent) Run(pollingDuration time.Duration) {
 						)
 						continue
 					}
+					bsList, err := a.client.SystemV0().BlockStorage().List(group.ID, ns.ID)
+					if err != nil {
+						a.logger.Error(
+							"get bs list",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()),
+						)
+						continue
+					}
+					bsMap := createBSMap(bsList)
 
 					for _, vm := range vmList {
 						oldHash := vm.ResourceHash
@@ -97,7 +107,7 @@ func (a *VirtualMachineAgent) Run(pollingDuration time.Duration) {
 							continue
 						}
 
-						err = a.syncVirtualMachine(vm)
+						err = a.syncVirtualMachine(vm, bsMap)
 						if err != nil {
 							a.logger.Error(
 								"sync virtualmachine",
@@ -197,7 +207,15 @@ func (a *VirtualMachineAgent) powerOffVirtualMachine(vm *system.VirtualMachine) 
 	return err
 }
 
-func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) error {
+func createBSMap(bsList []*system.BlockStorage) map[string]system.BlockStorage {
+	m := map[string]system.BlockStorage{}
+	for _, bs := range bsList {
+		m[bs.ID] = *bs
+	}
+	return m
+}
+
+func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine, bsMap map[string]system.BlockStorage) error {
 	pid, err := getPID(vm.Spec.UUID)
 	if err != nil {
 		return err
@@ -222,9 +240,9 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 
 	disks := []string{}
 	for _, bsID := range vm.Spec.BlockStorageIDs {
-		bs, err := a.client.SystemV0().BlockStorage().Get(vm.Group, vm.Namespace, bsID)
-		if err != nil {
-			return err
+		bs, ok := bsMap[bsID]
+		if !ok {
+			return fmt.Errorf("BlockStorage is not found")
 		}
 
 		if bs.Status.State != system.BlockStorageStateActive {
@@ -508,7 +526,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine) e
 	return nil
 }
 
-func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) error {
+func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine, bsMap map[string]system.BlockStorage) error {
 	if vm.DeleteState == meta.DeleteStateDelete {
 		err := a.powerOffVirtualMachine(vm)
 		if err != nil {
@@ -533,7 +551,7 @@ func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine) erro
 
 	switch vm.Spec.ActionState {
 	case system.VirtualMachineActionStatePowerOn:
-		err := a.powerOnVirtualMachine(vm)
+		err := a.powerOnVirtualMachine(vm, bsMap)
 		if err != nil {
 			return errors.Wrap(err, "poweron vm")
 		}
