@@ -22,10 +22,11 @@ type NoticeData struct {
 }
 
 type LevelDBStore struct {
-	db        *leveldb.DB
-	lockTable map[string]*sync.RWMutex
-	notifier  chan string
-	isDebug   bool
+	db              *leveldb.DB
+	lockTableLocker *sync.RWMutex
+	lockTable       map[string]*sync.RWMutex
+	notifier        chan string
+	isDebug         bool
 }
 
 func NewLevelDBStore(dirPath string, notifier chan string, isDebug bool) (*LevelDBStore, error) {
@@ -35,10 +36,11 @@ func NewLevelDBStore(dirPath string, notifier chan string, isDebug bool) (*Level
 	}
 
 	return &LevelDBStore{
-		db:        db,
-		lockTable: map[string]*sync.RWMutex{},
-		notifier:  notifier,
-		isDebug:   isDebug,
+		db:              db,
+		lockTableLocker: &sync.RWMutex{},
+		lockTable:       map[string]*sync.RWMutex{},
+		notifier:        notifier,
+		isDebug:         isDebug,
 	}, nil
 }
 
@@ -170,6 +172,8 @@ func (s *LevelDBStore) Delete(key string) {
 }
 
 func (s *LevelDBStore) Lock(key string) {
+	s.lockTableLocker.Lock()
+	defer s.lockTableLocker.Unlock()
 	if _, ok := s.lockTable[key]; !ok {
 		s.lockTable[key] = &sync.RWMutex{}
 	}
@@ -178,6 +182,8 @@ func (s *LevelDBStore) Lock(key string) {
 }
 
 func (s *LevelDBStore) Unlock(key string) {
+	s.lockTableLocker.Lock()
+	defer s.lockTableLocker.Unlock()
 	if _, ok := s.lockTable[key]; ok {
 		s.lockTable[key].Unlock()
 	}
