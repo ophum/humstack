@@ -97,7 +97,9 @@ func (a *ImageAgent) syncLocalImageEntityFromBlockStorage(imageEntity *system.Im
 
 			// 親がある場合はflatten
 			if _, err := image.GetParent(); err != nil {
-				return err
+				if err != rbd.ErrNotFound {
+					return errors.Wrapf(err, "Failed to get parent image. `%s`", imageName)
+				}
 			} else {
 				if err := image.Flatten(); err != nil {
 					return errors.Wrapf(err, "Failed to Flatten image `%s`", imageName)
@@ -106,7 +108,7 @@ func (a *ImageAgent) syncLocalImageEntityFromBlockStorage(imageEntity *system.Im
 
 			limitSize, err := image.GetSize()
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "Failed to get image size. `%s`", imageName)
 			}
 
 			sum := uint64(0)
