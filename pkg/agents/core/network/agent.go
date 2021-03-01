@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/ophum/humstack/pkg/api/core"
@@ -103,18 +104,22 @@ func (a *NetworkAgent) syncNetwork(net *core.Network) error {
 	if err != nil {
 		return err
 	}
+	nodeNetList, err := a.client.SystemV0().NodeNetwork().List(net.Group, net.Namespace)
+	if err != nil {
+		return err
+	}
+	nodeNetMap := map[string]system.NodeNetwork{}
+	for _, n := range nodeNetList {
+		nodeNetMap[n.ID] = *n
+	}
 
 	// 削除処理
 	if net.DeleteState == meta.DeleteStateDelete {
 		isDelete := true
 		for _, node := range nodeList {
-			nodeNet, err := a.client.SystemV0().NodeNetwork().Get(net.Group, net.Namespace, getNodeNetworkID(net.ID, node.ID))
-			if err != nil {
-				a.logger.Error(
-					"set delete state",
-					zap.String("msg", err.Error()),
-					zap.Time("time", time.Now()),
-				)
+			nodeNet, ok := nodeNetMap[getNodeNetworkID(net.ID, node.ID)]
+			if !ok {
+				log.Println("already deleted")
 				continue
 			}
 
@@ -143,16 +148,8 @@ func (a *NetworkAgent) syncNetwork(net *core.Network) error {
 	}
 	// 各ノードに作られていなければ作成する
 	for _, node := range nodeList {
-		nodeNet, err := a.client.SystemV0().NodeNetwork().Get(net.Group, net.Namespace, fmt.Sprintf("%s_%s", net.ID, node.ID))
-		if err != nil {
-			a.logger.Error(
-				"get node network",
-				zap.String("msg", err.Error()),
-				zap.Time("time", time.Now()),
-			)
-			continue
-		}
-		if nodeNet.ID == "" {
+		_, ok := nodeNetMap[getNodeNetworkID(net.ID, node.ID)]
+		if !ok {
 			nodeNet := &system.NodeNetwork{
 				Meta: meta.Meta{
 					ID:          fmt.Sprintf("%s_%s", net.ID, node.ID),
