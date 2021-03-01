@@ -45,8 +45,8 @@ func NewNodeNetworkAgent(client *client.Clients, config *NetworkAgentConfig, log
 	}
 }
 
-func (a *NodeNetworkAgent) Run() {
-	ticker := time.NewTicker(time.Second * 5)
+func (a *NodeNetworkAgent) Run(pollingDuration time.Duration) {
+	ticker := time.NewTicker(pollingDuration)
 	defer ticker.Stop()
 
 	for {

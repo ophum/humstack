@@ -26,8 +26,8 @@ func NewNetworkAgent(client *client.Clients, logger *zap.Logger) *NetworkAgent {
 	}
 }
 
-func (a *NetworkAgent) Run() {
-	ticker := time.NewTicker(time.Second * 5)
+func (a *NetworkAgent) Run(pollingDuration time.Duration) {
+	ticker := time.NewTicker(pollingDuration)
 	defer ticker.Stop()
 
 	for {

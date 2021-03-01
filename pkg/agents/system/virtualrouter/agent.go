@@ -41,8 +41,8 @@ func NewVirtualRouterAgent(client *client.Clients, externalBridge string, floati
 	}
 }
 
-func (a *VirtualRouterAgent) Run() {
-	ticker := time.NewTicker(time.Second * 5)
+func (a *VirtualRouterAgent) Run(pollingDuration time.Duration) {
+	ticker := time.NewTicker(pollingDuration)
 	defer ticker.Stop()
 
 	nodeName, err := os.Hostname()

@@ -20,8 +20,8 @@ func NewGroupAgent(client *client.Clients, logger *zap.Logger) *GroupAgent {
 	}
 }
 
-func (a *GroupAgent) Run() {
-	ticker := time.NewTicker(time.Second * 5)
+func (a *GroupAgent) Run(pollingDuration time.Duration) {
+	ticker := time.NewTicker(pollingDuration)
 	defer ticker.Stop()
 
 	for {

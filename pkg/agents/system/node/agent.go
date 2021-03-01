@@ -24,9 +24,8 @@ func NewNodeAgent(node *system.Node, client *client.Clients, logger *zap.Logger)
 	}
 }
 
-func (a *NodeAgent) Run() {
-
-	ticker := time.NewTicker(time.Second * 5)
+func (a *NodeAgent) Run(pollingDuration time.Duration) {
+	ticker := time.NewTicker(pollingDuration)
 	defer ticker.Stop()
 
 	for {

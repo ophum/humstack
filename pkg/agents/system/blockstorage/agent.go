@@ -46,8 +46,8 @@ func NewBlockStorageAgent(client *client.Clients, config *BlockStorageAgentConfi
 	}
 }
 
-func (a *BlockStorageAgent) Run() {
-	ticker := time.NewTicker(time.Second * 5)
+func (a *BlockStorageAgent) Run(pollingDuration time.Duration) {
+	ticker := time.NewTicker(pollingDuration)
 	defer ticker.Stop()
 
 	nodeName, err := os.Hostname()

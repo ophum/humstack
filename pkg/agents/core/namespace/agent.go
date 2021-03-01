@@ -21,8 +21,8 @@ func NewNamespaceAgent(client *client.Clients, logger *zap.Logger) *NamespaceAge
 	}
 }
 
-func (a *NamespaceAgent) Run() {
-	ticker := time.NewTicker(time.Second * 5)
+func (a *NamespaceAgent) Run(pollingDuration time.Duration) {
+	ticker := time.NewTicker(pollingDuration)
 	defer ticker.Stop()
 
 	for {

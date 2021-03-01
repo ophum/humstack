@@ -51,8 +51,8 @@ func NewVirtualMachineAgent(client *client.Clients, logger *zap.Logger) *Virtual
 	}
 }
 
-func (a *VirtualMachineAgent) Run() {
-	ticker := time.NewTicker(time.Second * 5)
+func (a *VirtualMachineAgent) Run(pollingDuration time.Duration) {
+	ticker := time.NewTicker(pollingDuration)
 	defer ticker.Stop()
 
 	for {

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/ophum/humstack/pkg/agents/core/group"
 	"github.com/ophum/humstack/pkg/agents/core/namespace"
@@ -37,6 +38,7 @@ type Config struct {
 	LimitMemory      string    `yaml:"limitMemory"`
 	LimitVcpus       string    `yaml:"limitVcpus"`
 	NodeAddress      string    `yaml:"nodeAddress"`
+	PollingSeconds   int       `yaml:"pollingSeconds"`
 
 	BlockStorageAgentConfig blockstorage.BlockStorageAgentConfig `yaml:"blockStorageAgentConfig"`
 
@@ -83,6 +85,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	pollingDuration := time.Second * time.Duration(config.PollingSeconds)
+
 	nodeAgent := node.NewNodeAgent(&system.Node{
 		Meta: meta.Meta{
 			ID:   hostname,
@@ -99,7 +103,7 @@ func main() {
 	}, client,
 		logger.With(zap.Namespace("NodeAgent")),
 	)
-	go nodeAgent.Run()
+	go nodeAgent.Run(pollingDuration)
 
 	if config.AgentMode == AgentModeAll || config.AgentMode == AgentModeCore {
 		grAgent := group.NewGroupAgent(
@@ -117,9 +121,9 @@ func main() {
 			logger.With(zap.Namespace("NetworkAgent")),
 		)
 
-		go grAgent.Run()
-		go nsAgent.Run()
-		go netAgent.Run()
+		go grAgent.Run(pollingDuration)
+		go nsAgent.Run(pollingDuration)
+		go netAgent.Run(pollingDuration)
 	}
 
 	if config.AgentMode == AgentModeAll || config.AgentMode == AgentModeSystem {
@@ -155,13 +159,13 @@ func main() {
 		)
 
 		log.Println(config.ImageAgentConfig.DownloadAPI)
-		go bsAgent.Run()
+		go bsAgent.Run(pollingDuration)
 		go bsAgent.DownloadAPI(&config.BlockStorageAgentConfig.DownloadAPI)
-		go imAgent.Run()
+		go imAgent.Run(pollingDuration)
 		go imAgent.DownloadAPI(&config.ImageAgentConfig.DownloadAPI)
-		go vmAgent.Run()
-		go vrAgent.Run()
-		go nodeNetAgent.Run()
+		go vmAgent.Run(pollingDuration)
+		go vrAgent.Run(pollingDuration)
+		go nodeNetAgent.Run(pollingDuration)
 
 	}
 

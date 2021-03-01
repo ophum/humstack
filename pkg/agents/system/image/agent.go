@@ -57,9 +57,8 @@ func NewImageAgent(client *client.Clients, config *ImageAgentConfig, logger *zap
 	}
 }
 
-func (a *ImageAgent) Run() {
-
-	ticker := time.NewTicker(time.Second * 5)
+func (a *ImageAgent) Run(pollingDuration time.Duration) {
+	ticker := time.NewTicker(pollingDuration)
 	defer ticker.Stop()
 
 	for {
