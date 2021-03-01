@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/n0stack/n0stack/n0core/pkg/driver/iproute2"
 	"github.com/ophum/humstack/pkg/agents/system/nodenetwork/utils"
+	"github.com/ophum/humstack/pkg/api/core"
 	"github.com/ophum/humstack/pkg/api/meta"
 	"github.com/ophum/humstack/pkg/api/system"
 	"github.com/ophum/humstack/pkg/client"
@@ -101,13 +102,35 @@ func (a *VirtualMachineAgent) Run(pollingDuration time.Duration) {
 					}
 					bsMap := createBSMap(bsList)
 
+					netList, err := a.client.CoreV0().Network().List(group.ID, ns.ID)
+					if err != nil {
+						a.logger.Error(
+							"get bs list",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()),
+						)
+						continue
+					}
+					netMap := createNetMap(netList)
+
+					nodeNetList, err := a.client.SystemV0().NodeNetwork().List(group.ID, ns.ID)
+					if err != nil {
+						a.logger.Error(
+							"get bs list",
+							zap.String("msg", err.Error()),
+							zap.Time("time", time.Now()),
+						)
+						continue
+					}
+					nodeNetMap := createNodeNetMap(nodeNetList)
+
 					for _, vm := range vmList {
 						oldHash := vm.ResourceHash
 						if vm.Annotations[VirtualMachineV0AnnotationNodeName] != a.nodeName {
 							continue
 						}
 
-						err = a.syncVirtualMachine(vm, bsMap)
+						err = a.syncVirtualMachine(vm, bsMap, netMap, nodeNetMap)
 						if err != nil {
 							a.logger.Error(
 								"sync virtualmachine",
@@ -215,7 +238,28 @@ func createBSMap(bsList []*system.BlockStorage) map[string]system.BlockStorage {
 	return m
 }
 
-func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine, bsMap map[string]system.BlockStorage) error {
+func createNetMap(netList []*core.Network) map[string]core.Network {
+	m := map[string]core.Network{}
+	for _, net := range netList {
+		m[net.ID] = *net
+	}
+	return m
+}
+
+func createNodeNetMap(nodeNetList []*system.NodeNetwork) map[string]system.NodeNetwork {
+	m := map[string]system.NodeNetwork{}
+	for _, nodeNet := range nodeNetList {
+		m[nodeNet.ID] = *nodeNet
+	}
+	return m
+}
+
+func (a *VirtualMachineAgent) powerOnVirtualMachine(
+	vm *system.VirtualMachine,
+	bsMap map[string]system.BlockStorage,
+	netMap map[string]core.Network,
+	nodeNetMap map[string]system.NodeNetwork) error {
+
 	pid, err := getPID(vm.Spec.UUID)
 	if err != nil {
 		return err
@@ -289,11 +333,11 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine, b
 			nic.MacAddress = generateMacAddress(vm.ID + nic.NetworkID)
 		}
 
-		n, err := a.client.CoreV0().Network().Get(vm.Group, vm.Namespace, nic.NetworkID)
-		if err != nil {
-			return err
+		n, ok := netMap[nic.NetworkID]
+		if !ok {
+			return fmt.Errorf("NIC `%s` is not found", nic.NetworkID)
 		}
-		net, err := a.getNodeNetwork(vm.Group, vm.Namespace, n.ID, a.nodeName)
+		net, err := a.getNodeNetwork(nodeNetMap, n.ID, a.nodeName)
 		if err != nil {
 			return err
 		}
@@ -357,11 +401,14 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine, b
 	networkConfigConfigs := []cloudinit.NetworkConfigConfig{}
 	for i, nic := range vm.Spec.NICs {
 		// 上のやつと統合するべき
-		n, err := a.client.CoreV0().Network().Get(vm.Group, vm.Namespace, nic.NetworkID)
-		if err != nil {
-			return err
+		n, ok := netMap[nic.NetworkID]
+		if !ok {
+			return fmt.Errorf("NIC `%s` is not found", nic.NetworkID)
 		}
 		_, ipnet, err := net.ParseCIDR(n.Spec.Template.Spec.IPv4CIDR)
+		if err != nil {
+			return errors.Wrapf(err, "NIC `%s` address parse cidr", nic.NetworkID)
+		}
 
 		subnets := []cloudinit.NetworkConfigConfigSubnet{}
 		if nic.IPv4Address != "" {
@@ -526,7 +573,12 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(vm *system.VirtualMachine, b
 	return nil
 }
 
-func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine, bsMap map[string]system.BlockStorage) error {
+func (a *VirtualMachineAgent) syncVirtualMachine(
+	vm *system.VirtualMachine,
+	bsMap map[string]system.BlockStorage,
+	netMap map[string]core.Network,
+	nodeNetMap map[string]system.NodeNetwork) error {
+
 	if vm.DeleteState == meta.DeleteStateDelete {
 		err := a.powerOffVirtualMachine(vm)
 		if err != nil {
@@ -551,7 +603,7 @@ func (a *VirtualMachineAgent) syncVirtualMachine(vm *system.VirtualMachine, bsMa
 
 	switch vm.Spec.ActionState {
 	case system.VirtualMachineActionStatePowerOn:
-		err := a.powerOnVirtualMachine(vm, bsMap)
+		err := a.powerOnVirtualMachine(vm, bsMap, netMap, nodeNetMap)
 		if err != nil {
 			return errors.Wrap(err, "poweron vm")
 		}
@@ -584,13 +636,9 @@ func getPID(uuid string) (int64, error) {
 	return strconv.ParseInt(string(out), 10, 64)
 }
 
-func (a *VirtualMachineAgent) getNodeNetwork(groupID, namespaceID, networkID, nodeID string) (*system.NodeNetwork, error) {
-	nodeNetList, err := a.client.SystemV0().NodeNetwork().List(groupID, namespaceID)
-	if err != nil {
-		return nil, err
-	}
+func (a *VirtualMachineAgent) getNodeNetwork(nodeNetMap map[string]system.NodeNetwork, networkID, nodeID string) (*system.NodeNetwork, error) {
 
-	for _, nodeNet := range nodeNetList {
+	for _, nodeNet := range nodeNetMap {
 		isOwned := false
 		for _, owner := range nodeNet.OwnerReferences {
 			if owner.Meta.ID == networkID {
@@ -600,7 +648,8 @@ func (a *VirtualMachineAgent) getNodeNetwork(groupID, namespaceID, networkID, no
 		}
 		if isOwned {
 			if node, ok := nodeNet.Annotations["nodenetworkv0/node_name"]; ok && node == nodeID {
-				return nodeNet, nil
+				n := nodeNet
+				return &n, nil
 			}
 		}
 	}
