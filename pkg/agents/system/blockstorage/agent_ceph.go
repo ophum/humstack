@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/ceph/go-ceph/rados"
 	"github.com/ceph/go-ceph/rbd"
@@ -360,13 +361,15 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			imageName := imageEntity.Annotations["imageentityv0/ceph-imagename"]
 			cephImage, err := rbd.OpenImageReadOnly(ioctx, imageName, rbd.NoSnapshot)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "Failed to open image read only `%s`", imageName)
 			}
 			defer cephImage.Close()
-			rbd.CloneFromImage(cephImage, snapName, ioctx, imageNameWithGroupAndNS, rbd.NewRbdImageOptions())
+			if err := rbd.CloneFromImage(cephImage, snapName, ioctx, imageNameWithGroupAndNS, rbd.NewRbdImageOptions()); err != nil {
+				return errors.Wrapf(err, "Failed to clone from image `%s` from `%s@%s`", imageNameWithGroupAndNS, cephImage, snapName)
+			}
 			// ceph image のリサイズ
 			if image, err := rbd.OpenImage(ioctx, imageNameWithGroupAndNS, ""); err != nil {
-				return err
+				return errors.Wrapf(err, "Failed to open image `%s`", imageNameWithGroupAndNS)
 			} else {
 				defer image.Close()
 				size, err := strconv.ParseUint(withUnitToWithoutUnit(bs.Spec.LimitSize), 10, 64)
@@ -374,10 +377,10 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 					if err := a.setStateError(bs); err != nil {
 						return err
 					}
-					return err
+					return errors.Wrapf(err, "Failed to parse uint limit size`%s`", bs.Spec.LimitSize)
 				}
 				if err := image.Resize(size); err != nil {
-					return err
+					return errors.Wrapf(err, "Failed to resize rbd image `%s`", bs.ID)
 				}
 			}
 			// ceph image内のqcow2リサイズ
@@ -391,9 +394,9 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			cmd := exec.Command(command, args...)
 			if _, err := cmd.CombinedOutput(); err != nil {
 				if err := a.setStateError(bs); err != nil {
-					return err
+					return errors.Wrapf(err, "Failed to exec `%s %s` but cannot update state", command, strings.Join(args, " "))
 				}
-				return err
+				return errors.Wrapf(err, "Failed to exec `%s %s`", command, strings.Join(args, " "))
 			}
 
 		}

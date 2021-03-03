@@ -304,9 +304,11 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(
 		return nil
 	}
 
-	vm.Status.State = system.VirtualMachineStatePending
-	if _, err = a.client.SystemV0().VirtualMachine().Update(vm); err != nil {
-		return err
+	if vm.Status.State != system.VirtualMachineStatePending {
+		vm.Status.State = system.VirtualMachineStatePending
+		if _, err = a.client.SystemV0().VirtualMachine().Update(vm); err != nil {
+			return err
+		}
 	}
 
 	disks := []string{}

@@ -252,7 +252,7 @@ func (a *BlockStorageAgent) Run(pollingDuration time.Duration) {
 								err = a.syncCephBlockStorage(bs)
 								if err != nil {
 									a.logger.Error(
-										"sync local blockstorage",
+										"sync ceph blockstorage",
 										zap.String("msg", err.Error()),
 										zap.Time("time", time.Now()),
 									)
