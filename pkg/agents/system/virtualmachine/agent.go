@@ -52,6 +52,53 @@ func NewVirtualMachineAgent(client *client.Clients, logger *zap.Logger) *Virtual
 	}
 }
 
+func (a *VirtualMachineAgent) syncVNCDisplayNumber(grList []*core.Group) error {
+	usedDisplayMap := map[int32]bool{}
+	for _, group := range grList {
+		nsList, err := a.client.CoreV0().Namespace().List(group.ID)
+		if err != nil {
+			return errors.Wrap(err, "syncVNCDisplayNumber() get ns list")
+		}
+
+		for _, ns := range nsList {
+			vmList, err := a.client.SystemV0().VirtualMachine().List(group.ID, ns.ID)
+			if err != nil {
+				return errors.Wrap(err, "syncVNCDisplayNumber() get vmList")
+			}
+
+			for _, vm := range vmList {
+				if vm.Annotations[VirtualMachineV0AnnotationNodeName] != a.nodeName {
+					continue
+				}
+				// 使用しているVNCディスプレイ番号のmapを作成
+				if _, ok := vm.Annotations["virtualmachinev0/vnc_display_number"]; ok {
+					usedDisplayNumber, err := strconv.ParseInt(vm.Annotations["virtualmachinev0/vnc_display_number"], 10, 32)
+					if err != nil {
+						return errors.Wrap(err, "parse int used dispaly number")
+					}
+					usedDisplayMap[int32(usedDisplayNumber)] = true
+				}
+			}
+
+		}
+	}
+	// 使用VNCディスプレイ番号の情報をsync
+	for displayNumber := int32(0); displayNumber <= 1000; displayNumber++ {
+		if _, ok := a.vncDisplayMap[displayNumber]; ok {
+			// agent情報で使用されているが実際のVM情報では使用されていない場合
+			if _, used := usedDisplayMap[displayNumber]; !used {
+				delete(a.vncDisplayMap, displayNumber)
+			}
+		} else {
+			// agent情報で使用されていないが実際のVM情報で使用されている場合
+			if _, used := usedDisplayMap[displayNumber]; used {
+				a.vncDisplayMap[displayNumber] = true
+			}
+		}
+	}
+	return nil
+}
+
 func (a *VirtualMachineAgent) Run(pollingDuration time.Duration) {
 	ticker := time.NewTicker(pollingDuration)
 	defer ticker.Stop()
@@ -59,11 +106,20 @@ func (a *VirtualMachineAgent) Run(pollingDuration time.Duration) {
 	for {
 		select {
 		case <-ticker.C:
-			usedDisplayMap := map[int32]bool{}
 			grList, err := a.client.CoreV0().Group().List()
 			if err != nil {
 				a.logger.Error(
 					"get group list",
+					zap.String("msg", err.Error()),
+					zap.Time("time", time.Now()),
+				)
+				continue
+			}
+
+			// 先にvnc番号を取得しておく
+			if err := a.syncVNCDisplayNumber(grList); err != nil {
+				a.logger.Error(
+					"sync VNC Display Number",
 					zap.String("msg", err.Error()),
 					zap.Time("time", time.Now()),
 				)
@@ -140,21 +196,6 @@ func (a *VirtualMachineAgent) Run(pollingDuration time.Duration) {
 							continue
 						}
 
-						// 使用しているVNCディスプレイ番号のmapを作成
-						if _, ok := vm.Annotations["virtualmachinev0/vnc_display_number"]; ok {
-							usedDisplayNumber, err := strconv.ParseInt(vm.Annotations["virtualmachinev0/vnc_display_number"], 10, 32)
-							if err != nil {
-								a.logger.Error(
-									"parse int used dispaly number",
-									zap.String("msg", err.Error()),
-									zap.Time("time", time.Now()),
-								)
-								continue
-
-							}
-							usedDisplayMap[int32(usedDisplayNumber)] = true
-						}
-
 						if vm.ResourceHash == oldHash {
 							continue
 						}
@@ -172,20 +213,6 @@ func (a *VirtualMachineAgent) Run(pollingDuration time.Duration) {
 				}
 			}
 
-			// 使用VNCディスプレイ番号の情報をsync
-			for displayNumber := int32(0); displayNumber <= 1000; displayNumber++ {
-				if _, ok := a.vncDisplayMap[displayNumber]; ok {
-					// agent情報で使用されているが実際のVM情報では使用されていない場合
-					if _, used := usedDisplayMap[displayNumber]; !used {
-						delete(a.vncDisplayMap, displayNumber)
-					}
-				} else {
-					// agent情報で使用されていないが実際のVM情報で使用されている場合
-					if _, used := usedDisplayMap[displayNumber]; used {
-						a.vncDisplayMap[displayNumber] = true
-					}
-				}
-			}
 		}
 	}
 }
