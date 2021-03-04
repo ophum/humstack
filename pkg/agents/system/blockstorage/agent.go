@@ -187,6 +187,9 @@ func (a *BlockStorageAgent) Run(pollingDuration time.Duration) {
 								a.parallelSemaphore.Release(1)
 								wg.Done()
 							}()
+							if bs.Annotations[BlockStorageV0AnnotationNodeName] != nodeName {
+								return
+							}
 							oldHash := bs.ResourceHash
 
 							// state check
