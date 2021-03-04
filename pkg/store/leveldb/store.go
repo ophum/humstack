@@ -151,21 +151,21 @@ func (s *LevelDBStore) acquireLocker(key string) {
 }
 
 func (s *LevelDBStore) Lock(key string) {
-	if !s.isExistsLocker(key) {
-		s.acquireLocker(key)
-	}
+	//if !s.isExistsLocker(key) {
+	//	s.acquireLocker(key)
+	//}
 
-	s.lockTableLocker.RLock()
-	defer s.lockTableLocker.RUnlock()
-	s.lockTable[key].Lock()
+	//s.lockTableLocker.RLock()
+	//defer s.lockTableLocker.RUnlock()
+	//s.lockTable[key].Lock()
 }
 
 func (s *LevelDBStore) Unlock(key string) {
-	s.lockTableLocker.RLock()
-	defer s.lockTableLocker.RUnlock()
-	if _, ok := s.lockTable[key]; ok {
-		s.lockTable[key].Unlock()
-	}
+	//s.lockTableLocker.RLock()
+	//defer s.lockTableLocker.RUnlock()
+	//if _, ok := s.lockTable[key]; ok {
+	//	s.lockTable[key].Unlock()
+	//}
 }
 
 func (s *LevelDBStore) printDB() {
