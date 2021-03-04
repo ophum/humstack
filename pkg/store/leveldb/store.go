@@ -87,68 +87,47 @@ func (s *LevelDBStore) Get(key string, v interface{}) error {
 }
 
 func (s *LevelDBStore) Put(key string, data interface{}) {
-	before, err := s.db.Get([]byte(key), nil)
-	if err != nil {
-		if err != leveldbErrors.ErrNotFound {
-			return
-		}
-	}
-
 	dataJSON, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
+		log.Println("leveldb store:", "Failed to marshal error ", err.Error())
 		return
 	}
 
-	err = s.db.Put([]byte(key), dataJSON, nil)
+	tr, err := s.db.OpenTransaction()
 	if err != nil {
+		log.Println("leveldb store:", "Failed to open transaction ", err.Error())
 		return
+	}
+
+	err = tr.Put([]byte(key), dataJSON, nil)
+	if err != nil {
+		tr.Discard()
+		log.Println("leveldb store", "Failed to put ", err.Error())
+		return
+	}
+	if err := tr.Commit(); err != nil {
+		log.Println("leveldb store", "Failed to commit transaction ", err.Error())
 	}
 
 	if s.isDebug {
 		fmt.Println("=============== PUT  ==================")
 		s.printDB()
 	}
-
-	obj := meta.Object{}
-	if len(before) == 0 {
-		if err := json.Unmarshal(dataJSON, &obj); err != nil {
-			return
-		}
-	} else {
-		if err := json.Unmarshal(before, &obj); err != nil {
-			return
-		}
-	}
-	noticeData := NoticeData{
-		Key:     key,
-		APIType: obj.Meta.APIType,
-		Before:  string(before),
-		After:   string(dataJSON),
-	}
-
-	noticeJSON, err := json.Marshal(noticeData)
-	if err != nil {
-		return
-	}
-	s.notifier <- string(noticeJSON)
 }
 
 func (s *LevelDBStore) Delete(key string) {
-	before, err := s.db.Get([]byte(key), nil)
+	tr, err := s.db.OpenTransaction()
 	if err != nil {
-		if err != leveldbErrors.ErrNotFound {
-			return
-		}
-	}
-	obj := meta.Object{}
-	if err := json.Unmarshal(before, &obj); err != nil {
-		log.Println(err.Error())
+		log.Println("leveldb store:", "Failed to open transaction", err.Error())
 		return
 	}
-
-	err = s.db.Delete([]byte(key), nil)
-	if err != nil {
-		log.Println(err.Error())
+	if err := tr.Delete([]byte(key), nil); err != nil {
+		log.Println("leveldb store:", "Failed to delete", err.Error())
+		tr.Discard()
+		return
+	}
+	if err := tr.Commit(); err != nil {
+		log.Println("leveldb store:", "Failed to commit", err.Error())
 		return
 	}
 
@@ -156,34 +135,29 @@ func (s *LevelDBStore) Delete(key string) {
 		fmt.Println("============== DELETE ================")
 		s.printDB()
 	}
+}
 
-	noticeJSON, err := json.Marshal(NoticeData{
-		Key:     key,
-		APIType: obj.Meta.APIType,
-		Before:  string(before),
-		After:   "",
-	})
-	if err != nil {
-		log.Println(err.Error())
-		return
-	}
+func (s *LevelDBStore) isExistsLocker(key string) bool {
+	s.lockTableLocker.RLock()
+	defer s.lockTableLocker.RUnlock()
+	_, ok := s.lockTable[key]
+	return ok
+}
 
-	s.notifier <- string(noticeJSON)
+func (s *LevelDBStore) acquireLocker(key string) {
+	s.lockTableLocker.Lock()
+	defer s.lockTableLocker.Unlock()
+	s.lockTable[key] = &sync.RWMutex{}
 }
 
 func (s *LevelDBStore) Lock(key string) {
-	s.lockTableLocker.RLock()
-	_, ok := s.lockTable[key]
-	s.lockTableLocker.RUnlock()
-	if !ok {
-		s.lockTableLocker.Lock()
-		s.lockTable[key] = &sync.RWMutex{}
-		s.lockTableLocker.Unlock()
+	if !s.isExistsLocker(key) {
+		s.acquireLocker(key)
 	}
 
 	s.lockTableLocker.RLock()
+	defer s.lockTableLocker.RUnlock()
 	s.lockTable[key].Lock()
-	s.lockTableLocker.RUnlock()
 }
 
 func (s *LevelDBStore) Unlock(key string) {
