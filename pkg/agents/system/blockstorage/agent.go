@@ -273,6 +273,10 @@ func (a *BlockStorageAgent) Run(pollingDuration time.Duration) {
 								)
 								return
 							}
+							a.logger.Info("sync because different hash",
+								zap.String("bs", bs.Namespace+"/"+bs.ID),
+								zap.Time("time", time.Now()),
+							)
 						}(usedBSIDs, &copiedBS)
 					}
 				}
