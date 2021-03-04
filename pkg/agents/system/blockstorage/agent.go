@@ -226,6 +226,15 @@ func (a *BlockStorageAgent) Run(pollingDuration time.Duration) {
 										return
 									}
 								}
+
+								if isUsed {
+									a.logger.Info(
+										"skip bs is used",
+										zap.String("bs", bs.Namespace+"/"+bs.ID),
+										zap.Time("time", time.Now()),
+									)
+									return
+								}
 							}
 
 							switch bs.Annotations[BlockStorageV0AnnotationType] {
