@@ -25,8 +25,8 @@ type Disk struct {
 
 	Type DiskType `json:"type"`
 
-	RequestBytes int `json:"request_bytes"`
-	LimitBytes   int `json:"limit_bytes"`
+	RequestSize ByteUnit `json:"request_size"`
+	LimitSize   ByteUnit `json:"limit_size"`
 
 	Status    DiskStatus `json:"status"`
 	CreatedAt time.Time  `json:"created_at"`

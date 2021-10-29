@@ -41,8 +41,8 @@ func (r *DiskRepository) Create(disk *entity.Disk) error {
 		if err := r.db.Create(&schema.Disk{
 			Name:         disk.Name,
 			Type:         disk.Type,
-			RequestBytes: disk.RequestBytes,
-			LimitBytes:   disk.LimitBytes,
+			RequestBytes: disk.RequestSize.Int64(),
+			LimitBytes:   disk.LimitSize.Int64(),
 			Status:       disk.Status,
 		}).Error; err != nil {
 			return err

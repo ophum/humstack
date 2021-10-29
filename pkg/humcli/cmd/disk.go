@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ophum/humstack/v1/pkg/agent/driver/qemu_img"
 	"github.com/ophum/humstack/v1/pkg/api/entity"
 	"github.com/spf13/cobra"
 )
@@ -23,8 +22,7 @@ var diskListCmd = &cobra.Command{
 		}
 		fmt.Println("name\tsize\tstatus")
 		for _, disk := range disks {
-			size, _ := qemu_img.ParseUnit(fmt.Sprint(disk.LimitBytes))
-			fmt.Printf("%s\t%s\t%s\n", disk.Name, size, disk.Status)
+			fmt.Printf("%s\t%s\t%s\n", disk.Name, disk.LimitSize, disk.Status)
 		}
 		return nil
 	},
@@ -45,19 +43,18 @@ var diskCreateCmd = &cobra.Command{
 		}
 
 		limitSize, _ := cmd.Flags().GetString("limit")
-		size, err := qemu_img.ParseUnit(limitSize)
+		size, err := entity.ParseByteUnit(limitSize)
 		if err != nil {
 			return err
 		}
 		name, _ := cmd.Flags().GetString("name")
 		disk, err := c.Create(cmd.Context(), &entity.Disk{
-			Name:       name,
-			LimitBytes: int(size.Int64()),
+			Name:      name,
+			LimitSize: *size,
 		})
 		if err != nil {
 			return err
 		}
-		size, _ = qemu_img.ParseUnit(fmt.Sprint(disk.LimitBytes))
 		fmt.Println("name\tsize\tstatus")
 		fmt.Printf("%s\t%s\t%s\n", disk.Name, size, disk.Status)
 		return nil

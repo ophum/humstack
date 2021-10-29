@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/ophum/humstack/v1/pkg/api/controller/request"
@@ -61,16 +62,27 @@ func (c *DiskController) List(ctx Context) {
 func (c *DiskController) Create(ctx Context) {
 	var req request.DiskCreateRequest
 	if err := ctx.Bind(&req); err != nil {
+		log.Println(err.Error())
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	requestSize, err := req.ParseRequestSize()
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	limitSize, err := req.ParseLimitSize()
+	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
 
 	disk, err := c.diskUsecase.Create(&entity.Disk{
-		Name:         req.Name,
-		Annotations:  req.Annotations,
-		Type:         req.Type,
-		RequestBytes: req.RequestBytes,
-		LimitBytes:   req.LimitBytes,
+		Name:        req.Name,
+		Annotations: req.Annotations,
+		Type:        req.Type,
+		RequestSize: *requestSize,
+		LimitSize:   *limitSize,
 	})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, nil)

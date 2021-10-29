@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"path/filepath"
 	"time"
@@ -76,15 +75,11 @@ func (a *DiskAgent) process(ctx context.Context) {
 }
 
 func (a *DiskAgent) create(ctx context.Context, disk *entity.Disk) error {
-	size, err := qemu_img.ParseUnit(fmt.Sprint(disk.LimitBytes))
-	if err != nil {
-		return err
-	}
 	path := a.getPath(disk)
 	img := &qemu_img.QemuImg{
 		Path: path,
 		Type: qemu_img.QemuImgTypeQcow2,
-		Size: *size,
+		Size: disk.LimitSize.Int64(),
 	}
 	if err := img.Create(ctx); err != nil {
 		return err

@@ -11,8 +11,8 @@ type Disk struct {
 	Annotations []*DiskAnnotation `gorm:"foreignKey:DiskName"`
 
 	Type         entity.DiskType
-	RequestBytes int
-	LimitBytes   int
+	RequestBytes int64
+	LimitBytes   int64
 
 	Status    entity.DiskStatus
 	CreatedAt time.Time
@@ -23,15 +23,18 @@ func ToEntityDisk(v *Disk) *entity.Disk {
 	if v == nil {
 		return nil
 	}
+
+	requestSize := entity.NewByteUnit(v.RequestBytes)
+	limitSize := entity.NewByteUnit(v.LimitBytes)
 	return &entity.Disk{
-		Name:         v.Name,
-		Annotations:  ToEntityDiskAnnotations(v.Annotations),
-		Type:         v.Type,
-		RequestBytes: v.RequestBytes,
-		LimitBytes:   v.LimitBytes,
-		Status:       v.Status,
-		CreatedAt:    v.CreatedAt,
-		UpdatedAt:    v.UpdatedAt,
+		Name:        v.Name,
+		Annotations: ToEntityDiskAnnotations(v.Annotations),
+		Type:        v.Type,
+		RequestSize: *requestSize,
+		LimitSize:   *limitSize,
+		Status:      v.Status,
+		CreatedAt:   v.CreatedAt,
+		UpdatedAt:   v.UpdatedAt,
 	}
 }
 

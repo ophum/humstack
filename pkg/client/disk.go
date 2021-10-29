@@ -56,11 +56,11 @@ func (c *DiskClient) Create(ctx context.Context, disk *entity.Disk) (*entity.Dis
 	client := resty.New()
 	var res response.DiskOneResponse
 	_, err := client.R().SetContext(ctx).SetHeaders(headers).SetBody(&request.DiskCreateRequest{
-		Name:         disk.Name,
-		Annotations:  disk.Annotations,
-		Type:         disk.Type,
-		RequestBytes: disk.RequestBytes,
-		LimitBytes:   disk.LimitBytes,
+		Name:        disk.Name,
+		Annotations: disk.Annotations,
+		Type:        disk.Type,
+		RequestSize: disk.RequestSize.String(),
+		LimitSize:   disk.LimitSize.String(),
 	}).SetResult(&res).Post(u.String())
 	if err != nil {
 		return nil, err
