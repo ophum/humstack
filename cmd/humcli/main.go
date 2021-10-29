@@ -1,14 +1,13 @@
 package main
 
 import (
-	"log"
+	"os"
 
-	"github.com/ophum/humstack/pkg/humcli/cmd"
+	"github.com/ophum/humstack/v1/pkg/humcli/cmd"
 )
 
 func main() {
-	err := cmd.Execute()
-	if err != nil {
-		log.Println(err)
+	if err := cmd.RootCmd.Execute(); err != nil {
+		os.Exit(1)
 	}
 }

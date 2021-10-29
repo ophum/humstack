@@ -1,4 +1,2 @@
-/database
-/virtualmachines
-/blockstorages
-/images
+/disks/*
+test.db
