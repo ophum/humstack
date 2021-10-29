@@ -10,17 +10,16 @@ import (
 	"github.com/ophum/humstack/v1/pkg/api/usecase"
 )
 
-type Context interface {
-	Bind(interface{}) error
-	Param(string) string
-	JSON(int, interface{})
-}
 type IDiskController interface {
 	Get(Context)
 	List(Context)
 	Create(Context)
 	UpdateStatus(Context)
 }
+
+const (
+	paramDiskID = "disk_id"
+)
 
 var _ IDiskController = &DiskController{}
 
@@ -33,7 +32,7 @@ func NewDiskController(diskUsecase usecase.IDiskUsecase) *DiskController {
 }
 
 func (c *DiskController) Get(ctx Context) {
-	id := ctx.Param("disk_id")
+	id := ctx.Param(paramDiskID)
 	disk, err := c.diskUsecase.Get(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, map[string]interface{}{
@@ -100,7 +99,7 @@ func (c *DiskController) UpdateStatus(ctx Context) {
 		return
 	}
 
-	id := ctx.Param("disk_id")
+	id := ctx.Param(paramDiskID)
 	if err := c.diskUsecase.UpdateStatus(id, req.Status); err != nil {
 		ctx.JSON(http.StatusInternalServerError, map[string]interface{}{})
 		return
