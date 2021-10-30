@@ -8,16 +8,8 @@ type DiskCreateRequest struct {
 	Name        string            `json:"name"`
 	Annotations map[string]string `json:"annotations"`
 	Type        entity.DiskType   `json:"disk_type"`
-	RequestSize string            `json:"request_size"`
-	LimitSize   string            `json:"limit_size"`
-}
-
-func (r DiskCreateRequest) ParseRequestSize() (*entity.ByteUnit, error) {
-	return entity.ParseByteUnit(r.RequestSize)
-}
-
-func (r DiskCreateRequest) ParseLimitSize() (*entity.ByteUnit, error) {
-	return entity.ParseByteUnit(r.LimitSize)
+	RequestSize entity.ByteUnit   `json:"request_size"`
+	LimitSize   entity.ByteUnit   `json:"limit_size"`
 }
 
 type DiskUpdateStatusRequest struct {

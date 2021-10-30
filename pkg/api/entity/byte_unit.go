@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -66,4 +67,21 @@ func (s ByteUnit) String() string {
 		return fmt.Sprintf("%dK", s.bytes/Kilobyte)
 	}
 	return fmt.Sprint(s.bytes)
+}
+
+func (s ByteUnit) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
+}
+
+func (s *ByteUnit) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+	b, err := ParseByteUnit(str)
+	if err != nil {
+		return err
+	}
+	*s = *b
+	return nil
 }

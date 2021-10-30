@@ -65,23 +65,12 @@ func (c *DiskController) Create(ctx Context) {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
-	requestSize, err := req.ParseRequestSize()
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, err)
-		return
-	}
-	limitSize, err := req.ParseLimitSize()
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, err)
-		return
-	}
-
 	disk, err := c.diskUsecase.Create(&entity.Disk{
 		Name:        req.Name,
 		Annotations: req.Annotations,
 		Type:        req.Type,
-		RequestSize: *requestSize,
-		LimitSize:   *limitSize,
+		RequestSize: req.RequestSize,
+		LimitSize:   req.LimitSize,
 	})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, nil)

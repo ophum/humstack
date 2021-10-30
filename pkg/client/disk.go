@@ -59,8 +59,8 @@ func (c *DiskClient) Create(ctx context.Context, disk *entity.Disk) (*entity.Dis
 		Name:        disk.Name,
 		Annotations: disk.Annotations,
 		Type:        disk.Type,
-		RequestSize: disk.RequestSize.String(),
-		LimitSize:   disk.LimitSize.String(),
+		RequestSize: disk.RequestSize,
+		LimitSize:   disk.LimitSize,
 	}).SetResult(&res).Post(u.String())
 	if err != nil {
 		return nil, err
