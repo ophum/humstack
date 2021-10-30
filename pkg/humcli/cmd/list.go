@@ -9,5 +9,6 @@ var listCmd = &cobra.Command{
 func init() {
 	listCmd.AddCommand(
 		diskListCmd,
+		nodeListCmd,
 	)
 }

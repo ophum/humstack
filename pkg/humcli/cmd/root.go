@@ -24,6 +24,16 @@ func newDiskClient() (*client.DiskClient, error) {
 	c := client.NewDiskClient(*endpoint)
 	return c, nil
 }
+
+func newNodeClient() (*client.NodeClient, error) {
+	endpoint, err := url.Parse(apiEndpoint)
+	if err != nil {
+		return nil, err
+	}
+	c := client.NewNodeClient(*endpoint)
+	return c, nil
+}
+
 func init() {
 	RootCmd.PersistentFlags().StringVarP(&apiEndpoint, "apiserver-endpoint", "H", "http://localhost:8080", "api server endpoint url, ex: http://localhost:8080")
 	cobra.OnInitialize()
