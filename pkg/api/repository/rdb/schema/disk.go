@@ -28,7 +28,7 @@ func ToEntityDisk(v *Disk) *entity.Disk {
 	limitSize := entity.NewByteUnit(v.LimitBytes)
 	return &entity.Disk{
 		Name:        v.Name,
-		Annotations: ToEntityDiskAnnotations(v.Annotations),
+		Annotations: ToMapDiskAnnotations(v.Annotations),
 		Type:        v.Type,
 		RequestSize: *requestSize,
 		LimitSize:   *limitSize,

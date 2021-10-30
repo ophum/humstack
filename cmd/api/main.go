@@ -26,9 +26,14 @@ func main() {
 	diskRepository := rdb.NewDiskRepository(db)
 	diskUsecase := usecase.NewDiskUsecase(diskRepository)
 	diskController := controller.NewDiskController(diskUsecase)
-
 	diskRouter := router.NewDiskRouter(r, diskController)
 	diskRouter.RegisterRoutes()
+
+	nodeRepository := rdb.NewNodeRepository(db)
+	nodeUsecase := usecase.NewNodeUsecase(nodeRepository)
+	nodeController := controller.NewNodeController(nodeUsecase)
+	nodeRouter := router.NewNodeRouter(r, nodeController)
+	nodeRouter.RegisterRoutes()
 
 	if err := r.Run(":8080"); err != nil {
 		panic(err)
