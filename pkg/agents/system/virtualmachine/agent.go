@@ -357,6 +357,7 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(
 	nics := []string{}
 	tapNames := []string{}
 	brNames := []string{}
+	usedNetdevIDs := map[string]struct{}{}
 	for i, nic := range vm.Spec.NICs {
 		if nic.MacAddress == "" {
 			nic.MacAddress = generateMacAddress(vm.ID + nic.NetworkID)
@@ -380,16 +381,28 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(
 		tapNames = append(tapNames, tapName)
 		brNames = append(brNames, net.Annotations["nodenetworkv0/bridge_name"])
 
+		netdevID := fmt.Sprintf("netdev-%s", net.Annotations["nodenetworkv0/bridge_name"])
+		if _, used := usedNetdevIDs[netdevID]; used {
+			// FIXME: とりあえずありえないNIC数分のsuffixを試す
+			for i := 1; i < 1000; i++ {
+				tryNetdevID := fmt.Sprintf("%s-%d", netdevID, i)
+				if _, used := usedNetdevIDs[tryNetdevID]; !used {
+					netdevID = tryNetdevID
+					break
+				}
+			}
+		}
+		usedNetdevIDs[netdevID] = struct{}{}
 		nics = append(nics,
 			"-device",
-			fmt.Sprintf("virtio-net,netdev=netdev-%s,driver=virtio-net-pci,mac=%s,mq=on,rx_queue_size=1024,tx_queue_size=1024,vectors=%d",
-				net.Annotations["nodenetworkv0/bridge_name"],
+			fmt.Sprintf("virtio-net,netdev=%s,driver=virtio-net-pci,mac=%s,mq=on,rx_queue_size=1024,tx_queue_size=1024,vectors=%d",
+				netdevID,
 				nic.MacAddress,
 				vcpusInt*2+2,
 			),
 			"-netdev",
-			fmt.Sprintf("tap,script=no,downscript=no,id=netdev-%s,vhost=on,ifname=%s,queues=%d",
-				net.Annotations["nodenetworkv0/bridge_name"],
+			fmt.Sprintf("tap,script=no,downscript=no,id=%s,vhost=on,ifname=%s,queues=%d",
+				netdevID,
 				tapName,
 				vcpusInt,
 			),
